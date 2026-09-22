@@ -106,6 +106,17 @@ private slots:
                     QCOMPARE(g.board().stoneAt(x, y), ref.board().stoneAt(x, y));
         }
     }
+    void passMove() {
+        Game g(9);
+        auto* n = g.play(QPoint(-1, -1), Stone::Black);
+        QVERIFY(n != nullptr);
+        QCOMPARE(g.currentNode()->moveNumber, 1);
+        QCOMPARE(g.currentNode()->pos, QPoint(-1, -1));
+        QCOMPARE(g.nextToPlay(), Stone::White);
+        QCOMPARE(g.board().stoneAt(4, 4), Stone::Empty);   // board unchanged
+        QVERIFY(g.play(QPoint(-1, -1), Stone::White));     // two passes in a row ok
+        QCOMPARE(g.currentNode()->moveNumber, 2);
+    }
     void capturesUndoRedo() {
         // capture counters must follow undo/redo consistently;
         // note: white (0,0) is captured by black (0,1) at move 3

@@ -4,14 +4,15 @@ Game::Game(int boardSize, const RulesConfig& cfg)
     : m_board(boardSize), m_cfg(cfg), m_current(m_tree.root()) {}
 
 MoveNode* Game::play(QPoint pos, Stone color) {
-    if (!m_board.isLegal(pos.x(), pos.y(), color)) return nullptr;
+    const bool isPass = pos.x() < 0 || pos.y() < 0;
+    if (!isPass && !m_board.isLegal(pos.x(), pos.y(), color)) return nullptr;
     MoveNode* node = m_tree.addChild(m_current, color, pos);
-    QVector<QPoint> captured;
-    m_board.placeStone(pos.x(), pos.y(), color, &captured);
-    if (color == Stone::Black)
-        m_blackCaptures += captured.size();
-    else if (color == Stone::White)
-        m_whiteCaptures += captured.size();
+    if (!isPass) {
+        QVector<QPoint> captured;
+        m_board.placeStone(pos.x(), pos.y(), color, &captured);
+        if (color == Stone::Black) m_blackCaptures += captured.size();
+        else if (color == Stone::White) m_whiteCaptures += captured.size();
+    }
     m_current = node;
     maybeSnapshot();
     return node;
