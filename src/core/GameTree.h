@@ -5,11 +5,17 @@
 
 #include "Board.h"
 
-struct AnalysisData {          // M1: structure only; filled by engine in M3
+struct MoveCandidate {
+    QPoint pos{-1, -1};
+    double winrate = 0.0;      // black's perspective 0..1
+    int visits = 0;
+};
+struct AnalysisData {          // M3: filled by analysis parser
     bool valid = false;
     double winrate = 0.0;      // black's perspective 0..1
     double scoreLead = 0.0;    // black's lead in points
     int visits = 0;
+    QVector<MoveCandidate> candidates;
 };
 struct MoveNode {
     QPoint pos{-1, -1};        // (-1,-1) = pass; root node the same
