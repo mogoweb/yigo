@@ -34,10 +34,12 @@ private:
     void refreshStatus();
     void newGame(int size);
     bool confirmDiscard();
+    void markDirty() { m_dirty = true; }
 
     Game* m_game = nullptr;
     BoardView* m_boardView = nullptr;
     QLabel* m_moveLabel = nullptr;
     QLabel* m_turnLabel = nullptr;
     QString m_currentFile;
+    bool m_dirty = false;
 };
