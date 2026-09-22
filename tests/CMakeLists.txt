@@ -5,3 +5,4 @@ function(yigo_add_test name)
 endfunction()
 
 yigo_add_test(tst_board)
+yigo_add_test(tst_rules)
