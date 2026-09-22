@@ -60,7 +60,8 @@ QVector<QPoint> BoardView::starPoints(int size) const {
 }
 
 void BoardView::drawWood(QPainter& p) {
-    const QRectF area(0, 0, m_geom.boardPx(), m_geom.boardPx());
+    // origin-inclusive: same coordinate space as gridToPoint/click mapping
+    const QRectF area(m_geom.origin(), QSizeF(m_geom.boardPx(), m_geom.boardPx()));
     QLinearGradient grad(area.topLeft(), area.bottomRight());
     grad.setColorAt(0.0, QColor(220, 179, 122));   // light kaya
     grad.setColorAt(1.0, QColor(196, 152, 92));    // darker kaya
@@ -71,10 +72,10 @@ void BoardView::drawGrid(QPainter& p) {
     const int n = m_game ? m_game->boardSize() : 19;
     p.setPen(QPen(QColor(60, 45, 25), 1.0));
     for (int i = 0; i < n; ++i) {
-        const QPointF a = m_geom.gridToPoint(0, i);
-        const QPointF b = m_geom.gridToPoint(n - 1, i);
-        p.drawLine(a, QPointF(b.x(), a.y()));   // horizontal
-        p.drawLine(a, QPointF(a.x(), b.y()));   // vertical
+        // horizontal: row i from col 0 to col n-1
+        p.drawLine(m_geom.gridToPoint(0, i), m_geom.gridToPoint(n - 1, i));
+        // vertical: column i from row 0 to row n-1
+        p.drawLine(m_geom.gridToPoint(i, 0), m_geom.gridToPoint(i, n - 1));
     }
     // outer border slightly thicker
     p.setPen(QPen(QColor(60, 45, 25), 2.0));
@@ -96,14 +97,14 @@ void BoardView::drawCoords(QPainter& p) {
     QFont f = font();
     f.setPointSizeF(qMax(6.0, f.pointSizeF() * 0.8));
     p.setFont(f);
+    const qreal cell = m_geom.cellPx();
+    const QPointF o = m_geom.origin();
     for (int i = 0; i < n; ++i) {
-        // top letters
-        const QRectF top((i + 1) * m_geom.cellPx() - m_geom.cellPx(), 0,
-                         m_geom.cellPx() * 2, m_geom.cellPx());
+        // top letters: in the 1-cell margin above the first grid line
+        const QRectF top(o.x() + i * cell, o.y(), cell * 2, cell);
         p.drawText(top, Qt::AlignCenter, QString(BoardGeometry::gridToDisplayX(i)));
         // left numbers (display row 1 at top = board row 0)
-        const QRectF left(0, (i + 1) * m_geom.cellPx() - m_geom.cellPx(),
-                          m_geom.cellPx(), m_geom.cellPx() * 2);
+        const QRectF left(o.x(), o.y() + i * cell, cell, cell * 2);
         p.drawText(left, Qt::AlignCenter, QString::number(n - i));
     }
 }
@@ -152,9 +153,9 @@ void BoardView::paintEvent(QPaintEvent*) {
     // HiDPI: QPainter works in logical (device-independent) coords; Qt scales
     // by devicePixelRatioF() automatically. Keep all math in qreal.
     updateGeometry();
-    // draw in board-local coords, offset by the shared origin (same origin
-    // mousePressEvent subtracts — one source of truth)
-    p.translate(m_geom.origin());
+    // NO extra translate here: every draw function positions itself via
+    // gridToPoint()/origin(), the same single source of truth that
+    // mousePressEvent maps clicks through (prevents paint/click drift)
     drawWood(p);
     drawGrid(p);
     drawStars(p);
