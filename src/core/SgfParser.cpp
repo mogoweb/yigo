@@ -405,6 +405,19 @@ QString SgfParser::serialize(const Game& game) {
     if (md.contains("GN")) out += "GN[" + escapeSgfValue(md.value("GN")) + "]";
     out += QString("KM[%1]").arg(game.rules().komi);
     out += QString("HA[%1]").arg(game.rules().handicap);
+    // ruleset (review fix #3: RU must survive roundtrip)
+    out += game.rules().ruleSet == RulesConfig::Japanese ? "RU[Japanese]"
+                                                         : "RU[Chinese]";
+    // setup stones (review fix #2: AB/AW must survive roundtrip)
+    QString ab, aw;
+    for (const auto& st : game.setupStones()) {
+        char col = 't', row = 't';
+        SgfCoord::toSgf(st.first, game.boardSize(), col, row);
+        QString& ref = st.second == Stone::Black ? ab : aw;
+        ref += QString("[%1%2]").arg(col).arg(row);
+    }
+    if (!ab.isEmpty()) out += "AB" + ab;
+    if (!aw.isEmpty()) out += "AW" + aw;
     const MoveNode* root = game.tree().root();
     if (!root->comment.isEmpty())
         out += "C[" + escapeSgfValue(root->comment) + "]";
