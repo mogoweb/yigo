@@ -20,8 +20,7 @@ void BoardView::setBoardSize(int size) {
 
 void BoardView::updateGeometry() {
     const int n = m_game ? m_game->boardSize() : 19;
-    const qreal side = qMin(width(), height());
-    m_geom = BoardGeometry(n, side / (n + 1));
+    m_geom = BoardGeometry::forView(n, width(), height());
 }
 
 void BoardView::resizeEvent(QResizeEvent*) {
@@ -32,6 +31,8 @@ void BoardView::resizeEvent(QResizeEvent*) {
 void BoardView::mousePressEvent(QMouseEvent* e) {
     updateGeometry();
     // Qt 5.11: localPos(); position() is 5.14+
+    // pointToGrid subtracts the board origin set by updateGeometry, so
+    // clicks map correctly in non-square views (review fix #1)
     const QPointF pos = e->localPos();
     const int gx = m_geom.pointToGrid(pos);
     const int gy = m_geom.pointToGridY(pos);
@@ -151,8 +152,9 @@ void BoardView::paintEvent(QPaintEvent*) {
     // HiDPI: QPainter works in logical (device-independent) coords; Qt scales
     // by devicePixelRatioF() automatically. Keep all math in qreal.
     updateGeometry();
-    p.translate((width() - m_geom.boardPx()) / 2.0,
-                (height() - m_geom.boardPx()) / 2.0);
+    // draw in board-local coords, offset by the shared origin (same origin
+    // mousePressEvent subtracts — one source of truth)
+    p.translate(m_geom.origin());
     drawWood(p);
     drawGrid(p);
     drawStars(p);

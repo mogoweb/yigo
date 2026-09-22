@@ -51,6 +51,23 @@ private slots:
         // 19 cells + 1-cell margin on each side: margin 30 + grid 18*30 + margin 30
         QCOMPARE(g.boardPx(), 20 * 30.0);
     }
+    void forViewAsymmetric() {
+        // 9x9 in a 600x400 view: cell = 400/10 = 40, centered horizontally
+        auto g = BoardGeometry::forView(9, 600.0, 400.0);
+        QCOMPARE(g.cellPx(), 40.0);
+        QCOMPARE(g.origin(), QPointF(100.0, 0.0));
+        QCOMPARE(g.boardPx(), 400.0);
+    }
+    void roundtripAsymmetric() {
+        // paint<->click roundtrip must hold in non-square views (review fix #1)
+        auto g = BoardGeometry::forView(9, 600.0, 400.0);
+        for (int y = 0; y < 9; ++y)
+            for (int x = 0; x < 9; ++x) {
+                const QPointF px = g.gridToPoint(x, y);
+                QCOMPARE(g.pointToGrid(px), x);
+                QCOMPARE(g.pointToGridY(px), y);
+            }
+    }
 };
 
 QTEST_GUILESS_MAIN(TestBoardGeometry)

@@ -95,6 +95,40 @@ private slots:
             }
         }
     }
+    void serializeSetupStones() {
+        // review fix #2: AB/AW must survive save→reopen roundtrip
+        Game g(9);
+        g.addSetupStone(QPoint(3, 3), Stone::Black);
+        g.addSetupStone(QPoint(6, 6), Stone::Black);
+        g.addSetupStone(QPoint(2, 2), Stone::White);
+        auto out = SgfParser::serialize(g);
+        QVERIFY2(out.contains("AB[dd][gg]"), qPrintable(out));
+        QVERIFY2(out.contains("AW[cc]"), qPrintable(out));
+        auto* g2 = SgfParser::parse(out);
+        QVERIFY2(g2 != nullptr, qPrintable(out));
+        QCOMPARE(g2->board().stoneAt(3, 3), Stone::Black);
+        QCOMPARE(g2->board().stoneAt(6, 6), Stone::Black);
+        QCOMPARE(g2->board().stoneAt(2, 2), Stone::White);
+        QCOMPARE(g2->setupStones().size(), 3);
+        delete g2;
+    }
+    void serializeRuleset() {
+        // review fix #3: RU must survive roundtrip
+        Game g(9);
+        QVERIFY2(SgfParser::serialize(g).contains("RU[Chinese]"),
+                 qPrintable(SgfParser::serialize(g)));
+        RulesConfig cfg;
+        cfg.ruleSet = RulesConfig::Japanese;
+        cfg.komi = 6.5;
+        Game j(9, cfg);
+        const QString out = SgfParser::serialize(j);
+        QVERIFY2(out.contains("RU[Japanese]"), qPrintable(out));
+        auto* g2 = SgfParser::parse(out);
+        QVERIFY(g2 != nullptr);
+        QCOMPARE(g2->rules().ruleSet, RulesConfig::Japanese);
+        QCOMPARE(g2->rules().komi, 6.5);
+        delete g2;
+    }
     void serializeBranchOrder() {
         // serialize keeps branch order (main line before variation);
         // variation branches at B(2,2): one undo after the white move
