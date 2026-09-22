@@ -25,6 +25,52 @@ static bool darkNear(const QImage& img, qreal x, qreal y) {
     return false;
 }
 
+// overlay regression (plan Task 5 / review I8): candidate tint must paint
+// over the wood at the candidate intersection
+static int checkOverlay() {
+    Game g(9);
+    AnalysisData d;
+    d.valid = true;
+    d.winrate = 0.6;
+    d.visits = 42;
+    MoveCandidate c;
+    c.pos = QPoint(4, 4);
+    c.winrate = 0.6;
+    c.visits = 42;
+    d.candidates.append(c);
+    BoardView v;
+    v.setGame(&g);
+    v.resize(400, 400);
+    const QImage base = v.grab().toImage();
+    v.setAnalysisOverlay(&d);
+    const QImage with = v.grab().toImage();
+    const auto geom = BoardGeometry::forView(9, 400, 400);
+    const QPointF center = geom.gridToPoint(4, 4);
+    // the tinted ellipse + text must visibly change the candidate area
+    int diffs = 0;
+    for (int y = int(center.y()) - 15; y <= int(center.y()) + 15; ++y)
+        for (int x = int(center.x()) - 15; x <= int(center.x()) + 15; ++x)
+            if (base.pixel(x, y) != with.pixel(x, y)) ++diffs;
+    if (diffs < 100) {
+        std::printf("FAIL: overlay barely changed candidate area (%d px)\n", diffs);
+        return 1;
+    }
+    // overlay tint is blue-ish (winrate >= 0.5): blue > red away from glyphs
+    const QRgb px = with.pixel(int(center.x()) - 12, int(center.y()));
+    if (qBlue(px) <= qRed(px)) {
+        std::printf("FAIL: overlay tint not blue at candidate (rgb %d,%d,%d)\n",
+                    qRed(px), qGreen(px), qBlue(px));
+        return 1;
+    }
+    // a far-away intersection must be unchanged
+    const QPointF far = geom.gridToPoint(0, 4);
+    if (base.pixel(int(far.x()), int(far.y())) != with.pixel(int(far.x()), int(far.y()))) {
+        std::printf("FAIL: overlay painted outside candidate\n");
+        return 1;
+    }
+    return 0;
+}
+
 static int checkAlignment(QSize size, int boardSize) {
     Game g(boardSize);
     BoardView v;
@@ -75,6 +121,7 @@ int main(int argc, char** argv) {
     failures += checkAlignment(QSize(400, 400), 9);
     failures += checkAlignment(QSize(600, 400), 9);
     failures += checkAlignment(QSize(800, 600), 19);
+    failures += checkOverlay();
     std::printf("%s\n", failures == 0 ? "ALL OK" : "FAILURES");
     return failures;
 }

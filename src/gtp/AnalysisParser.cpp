@@ -2,6 +2,12 @@
 #include <QStringList>
 
 namespace {
+// inverse of letterToCol: grid column -> GTP display letter (skips I)
+QChar colToLetter(int x) {
+    if (x < 0 || x > 24) return QChar();
+    return QChar(static_cast<char>('A' + x + (x >= 8 ? 1 : 0)));
+}
+
 // GTP display letter -> column (skips I); 'A'->0
 int letterToCol(QChar c) {
     const char ch = c.toUpper().toLatin1();
@@ -114,4 +120,27 @@ QPoint AnalysisParser::parseMove(const QString& body, int boardSize) {
     }
     // lowercase sgf pair "dd"
     return sgfToPos(mv.toLower(), boardSize);
+}
+
+QString AnalysisParser::posToGtp(QPoint pos, int boardSize) {
+    if (pos.x() < 0 || pos.y() < 0) return QStringLiteral("pass");
+    const QChar col = colToLetter(pos.x());
+    const int row = boardSize - pos.y();   // GTP rows count from the bottom
+    return QString(col) + QString::number(row);
+}
+
+QStringList AnalysisParser::positionCommands(const Game& game) {
+    QStringList cmds;
+    cmds << QString("boardsize %1").arg(game.boardSize());
+    cmds << QStringLiteral("clear_board");
+    cmds << QString("komi %1").arg(game.rules().komi);
+    // replay the path root -> current
+    QVector<MoveNode*> path = game.tree().pathTo(game.currentNode());
+    for (MoveNode* n : path) {
+        if (n->color == Stone::Empty) continue;
+        cmds << QString("play %1 %2")
+                    .arg(n->color == Stone::Black ? "B" : "W")
+                    .arg(posToGtp(n->pos, game.boardSize()));
+    }
+    return cmds;
 }

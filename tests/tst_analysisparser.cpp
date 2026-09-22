@@ -1,5 +1,6 @@
 #include <QtTest>
 #include "AnalysisParser.h"
+#include "Game.h"
 
 class TestAnalysisParser : public QObject {
     Q_OBJECT
@@ -73,6 +74,28 @@ private slots:
         QCOMPARE(AnalysisParser::parseMove("Q16", 19), QPoint(15, 3));
         QCOMPARE(AnalysisParser::parseMove("A1", 19), QPoint(0, 18));
         QCOMPARE(AnalysisParser::parseMove("T19", 19), QPoint(18, 0));
+    }
+    void posToGtpInverse() {
+        // review fix C1: position sync needs grid -> GTP text
+        QCOMPARE(AnalysisParser::posToGtp(QPoint(3, 15), 19), QString("D4"));
+        QCOMPARE(AnalysisParser::posToGtp(QPoint(15, 3), 19), QString("Q16"));
+        QCOMPARE(AnalysisParser::posToGtp(QPoint(0, 18), 19), QString("A1"));
+        QCOMPARE(AnalysisParser::posToGtp(QPoint(-1, -1), 19), QString("pass"));
+    }
+    void positionCommands() {
+        // review fix C1: full GTP position-sync command list
+        Game g(9);
+        QVERIFY(g.play(QPoint(2, 2), Stone::Black) != nullptr);
+        QVERIFY(g.play(QPoint(5, 5), Stone::White) != nullptr);
+        QVERIFY(g.play(QPoint(-1, -1), Stone::Black) != nullptr);   // pass
+        const QStringList cmds = AnalysisParser::positionCommands(g);
+        QCOMPARE(cmds.size(), 6);   // boardsize, clear_board, komi, 2 plays, 1 pass
+        QCOMPARE(cmds[0], QString("boardsize 9"));
+        QCOMPARE(cmds[1], QString("clear_board"));
+        QCOMPARE(cmds[2], QString("komi 7.5"));
+        QCOMPARE(cmds[3], QString("play B C7"));    // (2,2) on 9x9: C, row 9-2=7
+        QCOMPARE(cmds[4], QString("play W F4"));    // (5,5): F, row 9-5=4
+        QCOMPARE(cmds[5], QString("play B pass"));
     }
 };
 
