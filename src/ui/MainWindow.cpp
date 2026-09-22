@@ -1,9 +1,12 @@
 #include "MainWindow.h"
 
 #include "BoardView.h"
+#include "EnginePanel.h"
+#include "EngineProcess.h"
 #include "MainWindowLogic.h"
 #include "SgfParser.h"
 
+#include <QDockWidget>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -30,6 +33,61 @@ void MainWindow::setupCentral() {
     statusBar()->addPermanentWidget(m_moveLabel);
     statusBar()->addPermanentWidget(m_turnLabel);
     statusBar()->showMessage(tr("Ready"), 2000);
+
+    // engine dock + process
+    m_enginePanel = new EnginePanel(this);
+    auto* dock = new QDockWidget(tr("Engine"), this);
+    dock->setWidget(m_enginePanel);
+    addDockWidget(Qt::RightDockWidgetArea, dock);
+    m_engine = new EngineProcess(this);
+    connect(m_enginePanel, &EnginePanel::startRequested, this, &MainWindow::onEngineStart);
+    connect(m_enginePanel, &EnginePanel::stopRequested, this, &MainWindow::onEngineStop);
+    connect(m_engine, &EngineProcess::connected, this, &MainWindow::onEngineConnected);
+    connect(m_engine, &EngineProcess::crashed, this, &MainWindow::onEngineCrashed);
+    connect(m_engine, &EngineProcess::errorOccurred, this, &MainWindow::onEngineError);
+    connect(m_engine, &EngineProcess::analysisUpdate, this, &MainWindow::onAnalysisUpdate);
+}
+
+void MainWindow::onEngineStart(const EngineConfig& cfg) {
+    m_enginePanel->setStatus(tr("Starting..."));
+    if (!m_engine->start(cfg)) {
+        m_enginePanel->setStatus(tr("Start failed"), true);
+    } else {
+        m_enginePanel->setStatus(tr("Running"));
+        m_enginePanel->setRunning(true);
+    }
+}
+
+void MainWindow::onEngineStop() {
+    m_engine->stop();
+    m_enginePanel->setStatus(tr("Stopped"));
+    m_enginePanel->setRunning(false);
+    m_boardView->setAnalysisOverlay(nullptr);
+}
+
+void MainWindow::onEngineConnected() {
+    m_enginePanel->setStatus(tr("Connected: %1").arg(m_engine->engineName()));
+}
+
+void MainWindow::onEngineCrashed(int) {
+    // spec §6: main program survives; offer restart via panel Start
+    m_enginePanel->setStatus(tr("Engine crashed — offline play continues"), true);
+    m_enginePanel->setRunning(false);
+    statusBar()->showMessage(tr("Engine crashed"), 4000);
+}
+
+void MainWindow::onEngineError(const QString& msg) {
+    m_enginePanel->setStatus(msg, true);
+    m_enginePanel->setRunning(false);
+}
+
+void MainWindow::onAnalysisUpdate(const AnalysisData& data) {
+    m_lastAnalysis = data;
+    m_boardView->setAnalysisOverlay(&m_lastAnalysis);
+    const Stone toMove = m_game ? m_game->nextToPlay() : Stone::Black;
+    const double w = toMove == Stone::Black ? data.winrate : 1.0 - data.winrate;
+    statusBar()->showMessage(tr("Winrate %1%  Visits %2")
+                                 .arg(int(w * 100)).arg(data.visits), 3000);
 }
 
 void MainWindow::setupMenus() {

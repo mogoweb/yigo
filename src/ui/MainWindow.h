@@ -1,9 +1,13 @@
 #pragma once
 #include <QMainWindow>
 
+#include "EngineConfig.h"
+#include "GameTree.h"
 #include "Game.h"
 
 class BoardView;
+class EnginePanel;
+class EngineProcess;
 class QLabel;
 
 class MainWindow : public QMainWindow {
@@ -27,6 +31,12 @@ private slots:
     void onNext();
     void onFirst();
     void onLast();
+    void onEngineStart(const EngineConfig& cfg);
+    void onEngineStop();
+    void onEngineConnected();
+    void onEngineCrashed(int code);
+    void onEngineError(const QString& msg);
+    void onAnalysisUpdate(const AnalysisData& data);
 
 private:
     void setupMenus();
@@ -42,4 +52,7 @@ private:
     QLabel* m_turnLabel = nullptr;
     QString m_currentFile;
     bool m_dirty = false;
+    EngineProcess* m_engine = nullptr;
+    EnginePanel* m_enginePanel = nullptr;
+    AnalysisData m_lastAnalysis;
 };

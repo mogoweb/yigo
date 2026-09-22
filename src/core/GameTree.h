@@ -1,4 +1,5 @@
 #pragma once
+#include <QMetaType>
 #include <QPoint>
 #include <QString>
 #include <QVector>
@@ -50,3 +51,5 @@ private:
 
     MoveNode* m_root = nullptr;
 };
+
+Q_DECLARE_METATYPE(AnalysisData)
