@@ -8,7 +8,7 @@
 
 ## 核心特性
 
-- **纯 Qt 原生开发**：C++ Qt6 构建，轻量、高效、无脚本依赖
+- **纯 Qt 原生开发**：C++ Qt 5.11 构建，轻量、高效、无脚本依赖
 - **全平台支持**：Windows / macOS / Linux 统一体验
 - **标准 AI 引擎对接**：原生 GTP 协议支持 KataGo / Leela Zero
 - **专业复盘能力**：形势判断、胜率曲线、招法分析、变化推演
@@ -17,8 +17,8 @@
 
 ## 技术栈
 
-- **框架**：Qt 6（Widgets / Core / Concurrent / Network / Svg）
-- **语言**：C++17 / C++20
+- **框架**：Qt 5.11（Widgets / Core / Concurrent / Network / Svg）
+- **语言**：C++17
 - **构建系统**：CMake
 - **AI 协议**：GTP（Go Text Protocol）
 - **支持的引擎**：KataGo、Leela Zero
