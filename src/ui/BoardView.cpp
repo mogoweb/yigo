@@ -18,6 +18,11 @@ void BoardView::setBoardSize(int size) {
     update();
 }
 
+void BoardView::setAnalysisOverlay(const AnalysisData* data) {
+    m_overlay = data;
+    update();
+}
+
 void BoardView::updateGeometry() {
     const int n = m_game ? m_game->boardSize() : 19;
     m_geom = BoardGeometry::forView(n, width(), height());
@@ -135,6 +140,27 @@ void BoardView::drawStones(QPainter& p) {
     }
 }
 
+void BoardView::drawOverlay(QPainter& p) {
+    if (!m_overlay || !m_overlay->valid) return;
+    const qreal r = m_geom.cellPx() * 0.47;
+    for (const MoveCandidate& c : m_overlay->candidates) {
+        if (c.pos.x() < 0) continue;
+        const QPointF pt = m_geom.gridToPoint(c.pos.x(), c.pos.y());
+        // winrate -> tint: >=0.5 blue (engine favors black), <0.5 red
+        const double w = qBound(0.0, c.winrate, 1.0);
+        const QColor tint = QColor::fromHslF(w >= 0.5 ? 0.58 : 0.02, 0.7, 0.5, 0.45);
+        p.setPen(Qt::NoPen);
+        p.setBrush(tint);
+        p.drawEllipse(pt, r, r);
+        p.setPen(QPen(Qt::white, 1.5));
+        QFont f = font();
+        f.setPointSizeF(qMax(6.0, f.pointSizeF() * 0.7));
+        p.setFont(f);
+        p.drawText(QRectF(pt - QPointF(r, r), QSizeF(r * 2, r * 2)),
+                   Qt::AlignCenter, QString::number(int(w * 100)) + '%');
+    }
+}
+
 void BoardView::drawLastMoveMark(QPainter& p) {
     if (!m_game) return;
     const MoveNode* cur = m_game->currentNode();
@@ -161,5 +187,6 @@ void BoardView::paintEvent(QPaintEvent*) {
     drawStars(p);
     drawCoords(p);
     drawStones(p);
+    drawOverlay(p);
     drawLastMoveMark(p);
 }

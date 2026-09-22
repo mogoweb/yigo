@@ -20,6 +20,7 @@ public:
     void stop();                                  // graceful quit -> kill on timeout
     bool isRunning() const;
     bool isAnalyzing() const;
+    const QString& engineName() const { return m_engineName; }
     void query(quint64 id, const QString& command);       // one-shot GTP command
     void startAnalysis(const AnalysisQuery& q);           // kata-analyze stream
     void stopAnalysis();

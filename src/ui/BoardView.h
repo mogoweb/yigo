@@ -12,6 +12,7 @@ public:
     explicit BoardView(QWidget* parent = nullptr);
     void setGame(Game* game);
     void setBoardSize(int size);
+    void setAnalysisOverlay(const AnalysisData* data);   // nullptr = no overlay
 
 signals:
     void boardClicked(QPoint pos);
@@ -28,9 +29,11 @@ private:
     void drawStars(QPainter& p);
     void drawCoords(QPainter& p);
     void drawStones(QPainter& p);
+    void drawOverlay(QPainter& p);
     void drawLastMoveMark(QPainter& p);
     QVector<QPoint> starPoints(int size) const;
 
     Game* m_game = nullptr;
     BoardGeometry m_geom{19, 30.0};
+    const AnalysisData* m_overlay = nullptr;
 };
