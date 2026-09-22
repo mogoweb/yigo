@@ -20,7 +20,8 @@ public:
     MoveNode* currentNode() const { return m_current; }
 
     // play: if legal, create MoveNode under current node and advance,
-    // returns the new node; returns nullptr if illegal
+    // returns the new node; returns nullptr if illegal.
+    // pos=(-1,-1) is a pass: no legality check, board unchanged.
     MoveNode* play(QPoint pos, Stone color);
     bool undo();                          // step back to parent; false at root
     bool redo();                          // advance to children[0] (main); false if none
