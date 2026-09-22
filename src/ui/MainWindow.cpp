@@ -67,6 +67,12 @@ void MainWindow::onEngineStop() {
 
 void MainWindow::onEngineConnected() {
     m_enginePanel->setStatus(tr("Connected: %1").arg(m_engine->engineName()));
+    // engine is ready: analyze the current position so the overlay goes live
+    if (m_game) {
+        AnalysisQuery q;
+        q.color = m_game->nextToPlay();
+        m_engine->analyzePosition(*m_game, q);
+    }
 }
 
 void MainWindow::onEngineCrashed(int) {
@@ -85,6 +91,7 @@ void MainWindow::onAnalysisUpdate(const AnalysisData& data) {
     m_lastAnalysis = data;
     m_boardView->setAnalysisOverlay(&m_lastAnalysis);
     const Stone toMove = m_game ? m_game->nextToPlay() : Stone::Black;
+    // AnalysisData.winrate is always black's perspective (spec invariant)
     const double w = toMove == Stone::Black ? data.winrate : 1.0 - data.winrate;
     statusBar()->showMessage(tr("Winrate %1%  Visits %2")
                                  .arg(int(w * 100)).arg(data.visits), 3000);
@@ -139,6 +146,12 @@ void MainWindow::onBoardClicked(QPoint pos) {
     markDirty();
     m_boardView->update();
     refreshStatus();
+    // keep the live analysis in sync with the new position (review fix C1)
+    if (m_engine && m_engine->isRunning()) {
+        AnalysisQuery q;
+        q.color = m_game->nextToPlay();
+        m_engine->analyzePosition(*m_game, q);
+    }
 }
 
 void MainWindow::refreshStatus() {

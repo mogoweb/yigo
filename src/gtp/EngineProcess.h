@@ -2,9 +2,11 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <QTimer>
 
 #include "EngineConfig.h"
 #include "AnalysisParser.h"
+#include "Game.h"
 
 class QProcess;
 class GtpClient;
@@ -22,7 +24,9 @@ public:
     bool isAnalyzing() const;
     const QString& engineName() const { return m_engineName; }
     void query(quint64 id, const QString& command);       // one-shot GTP command
-    void startAnalysis(const AnalysisQuery& q);           // kata-analyze stream
+    // sync the engine's board with the game, then analyze the current node
+    void analyzePosition(const Game& game, const AnalysisQuery& q);
+    void startAnalysis(const AnalysisQuery& q);           // stream on current board
     void stopAnalysis();
 
 signals:
@@ -39,6 +43,8 @@ private:
     enum class State { Idle, Analyzing, Stopping };
     void handleResponse(quint64 id, bool success, const QString& body);
     void doStartAnalysis();
+    void resetSessionState();
+    void armQueryTimeout();
 
     EngineConfig m_cfg;
     State m_state = State::Idle;
@@ -48,4 +54,9 @@ private:
     QString m_engineName;
     QStringList m_supported;
     AnalysisQuery m_analysisQuery;
+    int m_boardSize = 19;
+    QStringList m_positionQueue;     // pending position-sync commands
+    QTimer m_queryTimeout;           // spec §6: 30s per-command timeout
+    QByteArray m_lineBuffer;         // partial-line carry-over for analysis
+    bool m_userStop = false;
 };
