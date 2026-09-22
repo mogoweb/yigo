@@ -8,7 +8,7 @@ English | [简体中文](README_zh-CN.md)
 
 ## Core Features
 
-- **Pure Qt Native**: Built with C++ Qt6, lightweight, efficient and script-free
+- **Pure Qt Native**: Built with C++ Qt 5.11, lightweight, efficient and script-free
 - **Cross-platform**: Unified experience on Windows / macOS / Linux
 - **AI Engine Integration**: Native GTP protocol support for KataGo / Leela Zero
 - **Professional Review**: Score estimation, winrate curve, move analysis & variations
@@ -17,8 +17,8 @@ English | [简体中文](README_zh-CN.md)
 
 ## Tech Stack
 
-- **Framework**: Qt 6 (Widgets / Core / Concurrent / Network / Svg)
-- **Language**: C++17 / C++20
+- **Framework**: Qt 5.11 (Widgets / Core / Concurrent / Network / Svg)
+- **Language**: C++17
 - **Build System**: CMake
 - **AI Protocol**: GTP (Go Text Protocol)
 - **Supported Engines**: KataGo, Leela Zero
