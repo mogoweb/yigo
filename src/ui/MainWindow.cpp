@@ -61,6 +61,7 @@ void MainWindow::newGame(int size) {
     delete m_game;
     m_game = new Game(size);
     m_currentFile.clear();
+    m_dirty = false;
     m_boardView->setGame(m_game);
     setWindowTitle(tr("YiGo 弈境"));
     refreshStatus();
@@ -77,6 +78,7 @@ void MainWindow::onBoardClicked(QPoint pos) {
         statusBar()->showMessage(hint, 2000);   // no modal per spec §6
         return;
     }
+    markDirty();
     m_boardView->update();
     refreshStatus();
 }
@@ -91,6 +93,7 @@ void MainWindow::refreshStatus() {
 void MainWindow::onUndo() {
     if (!m_game) return;
     if (MainWindowLogic::handleAction(*m_game, MainWindowLogic::Action::Undo)) {
+        markDirty();
         m_boardView->update();
         refreshStatus();
     }
@@ -99,6 +102,7 @@ void MainWindow::onUndo() {
 void MainWindow::onPass() {
     if (!m_game) return;
     if (MainWindowLogic::handleAction(*m_game, MainWindowLogic::Action::Pass)) {
+        markDirty();
         m_boardView->update();
         refreshStatus();
     }
@@ -170,6 +174,7 @@ void MainWindow::onOpen() {
     delete m_game;
     m_game = g;
     m_currentFile = path;
+    m_dirty = false;
     m_boardView->setGame(m_game);
     setWindowTitle(tr("%1 - YiGo 弈境").arg(QFileInfo(path).fileName()));
     refreshStatus();
@@ -185,13 +190,17 @@ void MainWindow::onSave() {
         QMessageBox::warning(this, tr("Save failed"), tr("Cannot write %1").arg(path));
         return;
     }
-    f.write(SgfParser::serialize(*m_game).toUtf8());
+    if (f.write(SgfParser::serialize(*m_game).toUtf8()) == -1) {
+        QMessageBox::warning(this, tr("Save failed"), tr("Cannot write %1").arg(path));
+        return;
+    }
     m_currentFile = path;
+    m_dirty = false;
     setWindowTitle(tr("%1 - YiGo 弈境").arg(QFileInfo(path).fileName()));
 }
 
 bool MainWindow::confirmDiscard() {
-    if (!m_game || m_game->tree().nodeCount() <= 1) return true;   // empty game
+    if (!m_dirty) return true;   // clean (empty or just saved/loaded)
     const QMessageBox::StandardButton r = QMessageBox::question(
         this, tr("Discard current game?"),
         tr("The current game is not saved. Discard it?"),
