@@ -176,6 +176,9 @@ void MainWindow::onOpen() {
     m_currentFile = path;
     m_dirty = false;
     m_boardView->setGame(m_game);
+    // jump to the last move so an opened game is visible immediately
+    // (standard review-app behavior; use Home / Left to navigate back)
+    MainWindowLogic::handleAction(*m_game, MainWindowLogic::Action::LastMove);
     setWindowTitle(tr("%1 - YiGo 弈境").arg(QFileInfo(path).fileName()));
     refreshStatus();
 }
