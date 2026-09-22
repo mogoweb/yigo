@@ -1,7 +1,7 @@
 # YiGo（弈境）架构设计文档
 
 日期：2026-09-21
-状态：待审阅
+状态：已确认（Qt5 基线修订版）
 范围：整体架构 + 全功能里程碑规划
 
 ## 1. 需求背景与约束
@@ -11,11 +11,22 @@ YiGo 是跨平台围棋 AI 分析复盘软件，对标 Katrain，纯 Qt C++ 实�
 | 维度 | 决策 |
 |---|---|
 | 功能范围 | 完整版规划：人机对弈、复盘分析、胜率曲线、变着研究，分里程碑实施 |
-| 平台 | Qt 6.2+ 基线，UOS/Deepin 为开发验证平台，Windows/macOS 兼容适配 |
+| 平台 | **Qt 5.11 API 基线（UOS V20 / 麒麟系统自带库）**，Linux 使用系统 Qt 不捆绑；不使用 Qt 5.12+/Qt6 独有 API，保持 Qt6 迁移友好；Windows/macOS 兼容适配 |
+| Qt 库分发 | Linux 下依赖系统 Qt5 库（apt 安装 qtbase5-dev 编译，运行时依赖系统 libqt5core5a 等）；实测 Qt6 官方二进制在 UOS V20 (glibc 2.28) 无法运行，故采用 Qt5 |
 | 引擎分发 | 用户自备 KataGo / Leela Zero，软件只实现 GTP 客户端 |
 | 技术边界 | 纯 Qt 零第三方依赖，SGF/GTP/图表全部自研 |
 | 核心场景 | 人机对弈为主（支持让子、贴目），双人本地对弈顺带支持，复盘为第二大场景 |
 | 质量属性 | 快速启动、低内存、HiDPI 清晰渲染、引擎崩溃不影响主程序 |
+
+### Qt 版本基线细则
+
+- **API 上限**：只使用 Qt 5.11 及以前就存在的 API（UOS V20 仓库版本 5.11.3，麒麟同代）。需要较新 API 的场景一律用手写实现替代
+- **Qt6 迁移友好**：
+  - 容器统一用 `QVector`（Qt6 中 QList=QVector，迁移时改名即可）
+  - 避免 5.12+ 才有的 API（如 `QRandomGenerator::system()` 之外的便捷接口按需评估、`QTextStream` 新枚举等）
+  - 已知迁移点（如 `QString::split` 的 `QString::KeepEmptyParts`，Qt6 改为 `Qt::KeepEmptyParts`）封装到工具函数，便于条件编译切换
+- **编译环境**：g++ 8.3（C++17）、CMake ≥ 3.16（UOS 仓库 3.22 满足）、ninja（仓库 1.8.2 满足）
+- HiDPI：Qt 5.11 Widgets 下用 `devicePixelRatioF()` + `AA_EnableHighDpiScaling`（5.6+ 属性），分数缩放能力弱于 Qt6，以整数倍缩放为验收基线
 
 ## 2. 架构总览
 
@@ -46,7 +57,7 @@ YiGo 是跨平台围棋 AI 分析复盘软件，对标 Katrain，纯 Qt C++ 实�
 
 ```
 yigo/
-├── CMakeLists.txt              # 顶层 CMake（Qt6, C++17）
+├── CMakeLists.txt              # 顶层 CMake（Qt 5.11+, C++17）
 ├── src/
 │   ├── main.cpp
 │   ├── core/                   # 领域层：纯 C++，不依赖 QtGui
