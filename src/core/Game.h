@@ -1,5 +1,6 @@
 #pragma once
 #include <QHash>
+#include <QMap>
 #include <QPoint>
 #include <QVector>
 
@@ -31,6 +32,19 @@ public:
     int blackCaptures() const { return m_blackCaptures; }
     int whiteCaptures() const { return m_whiteCaptures; }
 
+    // SGF root metadata (PB/PW/DT/RE/GN/...)
+    const QMap<QString, QString>& metadata() const { return m_metadata; }
+    void setMetadata(const QMap<QString, QString>& md) { m_metadata = md; }
+
+    // setup stones placed at the root position (AB/AW, handicap)
+    const QVector<QPair<QPoint, Stone>>& setupStones() const { return m_setupStones; }
+    void addSetupStone(QPoint pos, Stone color) { m_setupStones.append(qMakePair(pos, color)); }
+
+    // internal helpers used by SgfParser: move the cursor without replaying
+    // (caller then rebuilds via rewindTo or continues building the tree)
+    void advanceTo(MoveNode* node) { m_current = node; }
+    void rewindTo(MoveNode* node) { goTo(node); }
+
 private:
     void rebuildBoard();
     void maybeSnapshot();
@@ -42,6 +56,8 @@ private:
     MoveNode* m_current = nullptr;
     int m_blackCaptures = 0;
     int m_whiteCaptures = 0;
+    QMap<QString, QString> m_metadata;
+    QVector<QPair<QPoint, Stone>> m_setupStones;
     QHash<int, QVector<Stone>> m_snapshots;   // moveNumber -> grid
     static constexpr int SnapshotInterval = 50;
 };

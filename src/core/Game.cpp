@@ -47,8 +47,7 @@ Stone Game::nextToPlay() const {
 }
 
 void Game::rebuildBoard() {
-    restoreSnapshotFor(m_current);
-    // replay moves from the snapshot point up to current node
+    restoreSnapshotFor(m_current);    // replay moves from the snapshot point up to current node
     // find the path from snapshot node (or root) to current
     QVector<MoveNode*> path;
     MoveNode* cur = m_current;
@@ -68,21 +67,20 @@ void Game::rebuildBoard() {
         // replay everything from root; path currently ends at root
         base = m_tree.root();
     }
-    // board = snapshot grid (or empty) then replay path (root..current order)
+    // board = snapshot grid (or empty) + setup stones, then replay path
+    m_board.clear();
+    for (const auto& st : m_setupStones)
+        m_board.setupStone(st.first.x(), st.first.y(), st.second);
     if (snapshotMove >= 0) {
-        m_board.clear();
         const QVector<Stone>& grid = m_snapshots[snapshotMove];
         // restore grid via setupStone to keep hash consistent
         for (int y = 0; y < m_board.size(); ++y)
             for (int x = 0; x < m_board.size(); ++x) {
                 const Stone s = grid[y * m_board.size() + x];
-                if (s != Stone::Empty) m_board.setupStone(x, y, s);
+                m_board.setupStone(x, y, s);
             }
-        // clear ko history: setup stones pollute m_history; keep it simple —
-        // ko state after restore is best-effort (positions recorded before
-        // snapshot are not reachable through normal play anyway)
-    } else {
-        m_board.clear();
+        // ko history after restore is best-effort (positions recorded before
+        // the snapshot are not reachable through normal play anyway)
     }
     // recompute captures by replaying
     int blackCaps = 0, whiteCaps = 0;
