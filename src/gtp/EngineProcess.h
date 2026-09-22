@@ -46,7 +46,5 @@ private:
     quint64 m_nextId = 1;
     QString m_engineName;
     QStringList m_supported;
-    bool m_awaitingName = false;
-    bool m_awaitingList = false;
     AnalysisQuery m_analysisQuery;
 };

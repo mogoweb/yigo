@@ -17,3 +17,9 @@ yigo_add_test(tst_boardgeometry)
 yigo_add_test(tst_mainwindowlogic)
 yigo_add_test(tst_gtpclient)
 yigo_add_test(tst_analysisparser)
+
+add_executable(tst_engineprocess tst_engineprocess.cpp)
+target_compile_definitions(tst_engineprocess PRIVATE
+    FAKE_ENGINE="${CMAKE_SOURCE_DIR}/tests/data/fake_engine.sh")
+target_link_libraries(tst_engineprocess PRIVATE yigo_core Qt5::Test)
+add_test(NAME tst_engineprocess COMMAND tst_engineprocess)
