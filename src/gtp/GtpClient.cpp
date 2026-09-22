@@ -12,6 +12,7 @@ void GtpClient::sendCommand(const QString& cmd, quint64 id) {
 }
 
 void GtpClient::checkReadable() {
+    if (m_paused) return;   // owner is consuming raw stream itself
     m_pending += m_io->readAll();
     processBuffer();
 }
