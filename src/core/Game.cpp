@@ -1,5 +1,44 @@
 #include "Game.h"
 
+QPoint Game::handicapPoint(int boardSize, int n) {
+    if (n < 0) return QPoint(-1, -1);
+    // flat 9-point sequence: ur, ul, ll, lr, tengen, L, R, T, B
+    // (GnuGo-style diagonal start; tengen is the 5th point)
+    if (boardSize != 19 && boardSize != 13 && boardSize != 9) return QPoint(-1, -1);
+    if (n > 8) return QPoint(-1, -1);
+    const int c = boardSize / 2;                  // tengen coordinate
+    const int e = (boardSize == 9) ? 2 : 3;       // corner star offset
+    switch (n) {
+    case 0: return QPoint(boardSize - 1 - e, e);            // ur
+    case 1: return QPoint(e, e);                            // ul
+    case 2: return QPoint(e, boardSize - 1 - e);            // ll
+    case 3: return QPoint(boardSize - 1 - e, boardSize - 1 - e); // lr
+    case 4: return QPoint(c, c);                            // tengen
+    case 5: return QPoint(e, c);                            // left
+    case 6: return QPoint(boardSize - 1 - e, c);            // right
+    case 7: return QPoint(c, e);                            // top
+    default: return QPoint(c, boardSize - 1 - e);           // bottom
+    }
+}
+
+void Game::setupHandicap(int stones) {
+    m_setupStones.clear();
+    // even counts (4/6/8) skip the tengen point (standard Go placement)
+    const bool skipTengen = (stones >= 4 && stones % 2 == 0);
+    int applied = 0;
+    int idx = 0;
+    while (applied < stones && idx < 9) {
+        if (skipTengen && idx == 4) { ++idx; continue; }
+        const QPoint p = handicapPoint(boardSize(), idx);
+        if (p.x() < 0) break;
+        m_setupStones.append(qMakePair(p, Stone::Black));
+        ++applied;
+        ++idx;
+    }
+    m_cfg.handicap = applied;
+    rebuildBoard();
+}
+
 Game::Game(int boardSize, const RulesConfig& cfg)
     : m_board(boardSize), m_cfg(cfg), m_current(m_tree.root()) {}
 
@@ -43,7 +82,10 @@ void Game::goTo(MoveNode* node) {
 }
 
 Stone Game::nextToPlay() const {
-    if (m_current == m_tree.root()) return Stone::Black;
+    if (m_current == m_tree.root()) {
+        // handicap games: white plays first (root holds black setup stones)
+        return m_cfg.handicap > 0 ? Stone::White : Stone::Black;
+    }
     return Board::opponent(m_current->color);
 }
 
