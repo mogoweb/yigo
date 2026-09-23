@@ -24,6 +24,8 @@ public:
     bool isAnalyzing() const;
     const QString& engineName() const { return m_engineName; }
     void query(quint64 id, const QString& command);       // one-shot GTP command
+    quint64 nextRequestId() { return m_nextId++; }        // reserve an id for pairing
+    void sendCommandSequence(const QStringList& cmds);    // send commands verbatim
     // sync the engine's board with the game, then analyze the current node
     void analyzePosition(const Game& game, const AnalysisQuery& q);
     void startAnalysis(const AnalysisQuery& q);           // stream on current board

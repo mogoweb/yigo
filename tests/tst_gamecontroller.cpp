@@ -1,9 +1,20 @@
 #include <QtTest>
+#include <QSignalSpy>
 #include "GameController.h"
 #include "Game.h"
 
 class TestGameController : public QObject {
     Q_OBJECT
+private:
+    EngineConfig fakeCfg() const {
+        EngineConfig cfg;
+        cfg.type = EngineConfig::KataGo;
+        cfg.executable = "/bin/bash";
+        cfg.baseArgs = QStringList() << QStringLiteral(FAKE_ENGINE) << "basic";
+        cfg.gtpCommand = QStringLiteral("kata-analyze interval 50");
+        return cfg;
+    }
+
 private slots:
     void handicapPoints() {
         // 19 路标准让子摆位（对角开始，5 子加天元，6-8 子加边星）
@@ -37,6 +48,114 @@ private slots:
         Game g(9);
         g.setupHandicap(2);
         QCOMPARE(g.nextToPlay(), Stone::White);
+    }
+    void humanTurnFirstWhenHumanBlack() {
+        GameSetup setup;
+        setup.boardSize = 9;
+        setup.black.kind = PlayerConfig::Human;
+        setup.white.kind = PlayerConfig::AI;
+        GameController gc;
+        EngineProcess ep;
+        QVERIFY(ep.start(fakeCfg()));
+        gc.attachEngine(&ep);
+        gc.newGame(setup);
+        QCOMPARE(gc.phase(), GameController::Phase::HumanTurn);
+        // 人类落子后轮到 AI，AI 回 D4（9路 = (3,5)）后回到人类
+        QVERIFY(gc.humanPlay(QPoint(2, 2)));
+        QTRY_COMPARE(gc.phase(), GameController::Phase::EngineThinking);
+        QTRY_COMPARE(gc.phase(), GameController::Phase::HumanTurn);
+        QCOMPARE(gc.game()->board().stoneAt(3, 5), Stone::White);   // AI执白，D4 = (3,5)@9路
+        ep.stop();
+    }
+    void genmovePassEnds() {
+        qputenv("YIGO_FAKE_GENMOVE", "pass");
+        GameSetup setup;
+        setup.boardSize = 9;
+        setup.black.kind = PlayerConfig::Human;
+        setup.white.kind = PlayerConfig::AI;
+        GameController gc;
+        EngineProcess ep;
+        QVERIFY(ep.start(fakeCfg()));
+        gc.attachEngine(&ep);
+        QSignalSpy over(&gc, &GameController::gameOver);
+        gc.newGame(setup);
+        QVERIFY(gc.humanPlay(QPoint(2, 2)));
+        QTRY_COMPARE(gc.phase(), GameController::Phase::HumanTurn);
+        QVERIFY(gc.humanPlay(QPoint(-1, -1)));   // human pass → 两虚手终局
+        QTRY_COMPARE(gc.phase(), GameController::Phase::GameOver);
+        QCOMPARE(over.count(), 1);
+        QCOMPARE(gc.endReason(), QString("two passes"));
+        qunsetenv("YIGO_FAKE_GENMOVE");
+        ep.stop();
+    }
+    void genmoveResignEnds() {
+        qputenv("YIGO_FAKE_GENMOVE", "resign");
+        GameSetup setup;
+        setup.boardSize = 9;
+        setup.black.kind = PlayerConfig::Human;
+        setup.white.kind = PlayerConfig::AI;
+        GameController gc;
+        EngineProcess ep;
+        QVERIFY(ep.start(fakeCfg()));
+        gc.attachEngine(&ep);
+        QSignalSpy over(&gc, &GameController::gameOver);
+        gc.newGame(setup);
+        QVERIFY(gc.humanPlay(QPoint(2, 2)));
+        QTRY_COMPARE(gc.phase(), GameController::Phase::GameOver);
+        QCOMPARE(gc.winner(), Stone::Black);   // AI resign → 黑胜
+        QCOMPARE(gc.endReason(), QString("resign"));
+        qunsetenv("YIGO_FAKE_GENMOVE");
+        ep.stop();
+    }
+    void bothAiAlternates() {
+        // review focus 1: 双 AI 不卡死；fake 恒回 D4，重试 3 次后 engine error 终局
+        GameSetup setup;
+        setup.boardSize = 9;
+        setup.black.kind = PlayerConfig::AI;
+        setup.white.kind = PlayerConfig::AI;
+        GameController gc;
+        EngineProcess ep;
+        QVERIFY(ep.start(fakeCfg()));
+        gc.attachEngine(&ep);
+        gc.newGame(setup);
+        QCOMPARE(gc.phase(), GameController::Phase::EngineThinking);
+        QTRY_COMPARE_WITH_TIMEOUT(gc.phase(), GameController::Phase::GameOver, 30000);
+        QCOMPARE(gc.endReason(), QString("engine error"));
+        ep.stop();
+    }
+    void crashDuringThinkingRecovers() {
+        // review focus 4: 引擎思考中崩溃 → 回退 HumanTurn
+        GameSetup setup;
+        setup.boardSize = 9;
+        setup.black.kind = PlayerConfig::Human;
+        setup.white.kind = PlayerConfig::AI;
+        GameController gc;
+        EngineProcess ep;
+        QVERIFY(ep.start(fakeCfg()));
+        gc.attachEngine(&ep);
+        gc.newGame(setup);
+        QVERIFY(gc.humanPlay(QPoint(2, 2)));
+        QTRY_COMPARE(gc.phase(), GameController::Phase::EngineThinking);
+        ep.query(999, "please crash");   // fake engine kills itself
+        QTRY_COMPARE(gc.phase(), GameController::Phase::HumanTurn);
+        QVERIFY(gc.humanPlay(QPoint(4, 4)));   // 离线继续
+        ep.stop();
+    }
+    void humanPlayRejectedOutsideTurn() {
+        GameSetup setup;
+        setup.boardSize = 9;
+        setup.black.kind = PlayerConfig::AI;
+        setup.white.kind = PlayerConfig::Human;
+        GameController gc;
+        EngineProcess ep;
+        QVERIFY(ep.start(fakeCfg()));
+        gc.attachEngine(&ep);
+        QSignalSpy rej(&gc, &GameController::moveRejected);
+        gc.newGame(setup);                    // AI 执黑先走
+        QCOMPARE(gc.phase(), GameController::Phase::EngineThinking);
+        QVERIFY(!gc.humanPlay(QPoint(2, 2))); // 未轮到人
+        QCOMPARE(rej.count(), 1);
+        ep.stop();
     }
 };
 QTEST_GUILESS_MAIN(TestGameController)
