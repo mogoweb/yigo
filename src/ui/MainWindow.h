@@ -2,6 +2,7 @@
 #include <QMainWindow>
 
 #include "EngineConfig.h"
+#include "GameController.h"
 #include "GameTree.h"
 #include "Game.h"
 
@@ -23,6 +24,7 @@ private slots:
     void onNewGame19();
     void onNewGame13();
     void onNewGame9();
+    void onNewGameDialog();
     void onOpen();
     void onSave();
     void onUndo();
@@ -37,12 +39,15 @@ private slots:
     void onEngineCrashed(int code);
     void onEngineError(const QString& msg);
     void onAnalysisUpdate(const AnalysisData& data);
+    void onPhaseChanged(GameController::Phase phase);
+    void onGameOver(Stone winner, const QString& reason);
 
 private:
     void setupMenus();
     void setupCentral();
     void refreshStatus();
     void newGame(int size);
+    void startGame(const GameSetup& setup);
     bool confirmDiscard();
     void markDirty() { m_dirty = true; }
 
@@ -55,4 +60,5 @@ private:
     EngineProcess* m_engine = nullptr;
     EnginePanel* m_enginePanel = nullptr;
     AnalysisData m_lastAnalysis;
+    GameController* m_controller = nullptr;
 };
