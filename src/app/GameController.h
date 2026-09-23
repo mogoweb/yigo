@@ -29,6 +29,9 @@ public:
 
     void newGame(const GameSetup& setup);
     Game* game() const { return m_game; }
+    // release ownership of the current Game without deleting it (review mode)
+    // controller phase resets to Idle
+    Game* detachGame();
     Phase phase() const { return m_phase; }
     Stone engineColor() const { return m_engineColor; }
     void attachEngine(EngineProcess* engine);   // not owned

@@ -178,9 +178,8 @@ void MainWindow::startGame(const GameSetup& setup) {
     if (!confirmDiscard()) return;
     m_currentFile.clear();
     m_dirty = false;
-    // wire the play controller (replaces the raw-Game edit path)
+    // the controller owns the Game — never delete through m_game (C1 fix)
     m_controller->newGame(setup);
-    delete m_game;
     m_game = m_controller->game();
     m_boardView->setGame(m_game);
     setWindowTitle(tr("YiGo 弈境"));
@@ -192,9 +191,8 @@ void MainWindow::onNewGame13() { newGame(13); }
 void MainWindow::onNewGame9()  { newGame(9); }
 
 void MainWindow::onNewGameDialog() {
-    if (!confirmDiscard()) return;
     NewGameDialog dlg(this);
-    if (dlg.exec() != QDialog::Accepted) return;
+    if (dlg.exec() != QDialog::Accepted) return;   // confirmDiscard inside startGame
     startGame(dlg.setup());
 }
 
@@ -253,6 +251,13 @@ void MainWindow::onUndo() {
 
 void MainWindow::onPass() {
     if (!m_game) return;
+    // C4 fix: in play mode route through the controller state machine
+    if (m_controller && m_controller->phase() == GameController::Phase::HumanTurn) {
+        m_controller->humanPlay(QPoint(-1, -1));
+        m_boardView->update();
+        refreshStatus();
+        return;
+    }
     if (MainWindowLogic::handleAction(*m_game, MainWindowLogic::Action::Pass)) {
         markDirty();
         m_boardView->update();
@@ -323,7 +328,9 @@ void MainWindow::onOpen() {
         QMessageBox::warning(this, tr("Open failed"), err);
         return;
     }
-    delete m_game;
+    // C2 fix: the controller owns the play-mode Game — detach it first so
+    // the opened review game is owned by MainWindow alone
+    m_controller->detachGame();
     m_game = g;
     m_currentFile = path;
     m_dirty = false;
