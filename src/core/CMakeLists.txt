@@ -6,6 +6,7 @@ add_library(yigo_core STATIC
     SgfCoord.cpp
     SgfParser.cpp
     ${CMAKE_SOURCE_DIR}/src/app/MainWindowLogic.cpp
+    ${CMAKE_SOURCE_DIR}/src/app/GameController.cpp
     ${CMAKE_SOURCE_DIR}/src/gtp/GtpClient.cpp
     ${CMAKE_SOURCE_DIR}/src/gtp/AnalysisParser.cpp
     ${CMAKE_SOURCE_DIR}/src/gtp/EngineProcess.cpp

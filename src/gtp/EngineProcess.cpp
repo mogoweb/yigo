@@ -105,6 +105,11 @@ void EngineProcess::query(quint64 id, const QString& command) {
     if (m_client) m_client->sendCommand(command, id);
 }
 
+void EngineProcess::sendCommandSequence(const QStringList& cmds) {
+    for (const QString& c : cmds)
+        query(m_nextId++, c);
+}
+
 void EngineProcess::analyzePosition(const Game& game, const AnalysisQuery& q) {
     if (!isRunning()) {
         Q_EMIT errorOccurred(QStringLiteral("Engine not running"));
