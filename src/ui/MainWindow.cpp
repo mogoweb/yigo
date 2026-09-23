@@ -4,6 +4,7 @@
 #include "EnginePanel.h"
 #include "EngineProcess.h"
 #include "MainWindowLogic.h"
+#include "NewGameDialog.h"
 #include "SgfParser.h"
 
 #include <QDockWidget>
@@ -34,6 +35,14 @@ void MainWindow::setupCentral() {
     statusBar()->addPermanentWidget(m_turnLabel);
     statusBar()->showMessage(tr("Ready"), 2000);
 
+    // play controller
+    m_controller = new GameController(this);
+    connect(m_controller, &GameController::phaseChanged, this, &MainWindow::onPhaseChanged);
+    connect(m_controller, &GameController::gameOver, this, &MainWindow::onGameOver);
+    connect(m_controller, &GameController::moveRejected, this, [this](const QString& r) {
+        statusBar()->showMessage(r, 2000);
+    });
+
     // engine dock + process
     m_enginePanel = new EnginePanel(this);
     auto* dock = new QDockWidget(tr("Engine"), this);
@@ -46,6 +55,42 @@ void MainWindow::setupCentral() {
     connect(m_engine, &EngineProcess::crashed, this, &MainWindow::onEngineCrashed);
     connect(m_engine, &EngineProcess::errorOccurred, this, &MainWindow::onEngineError);
     connect(m_engine, &EngineProcess::analysisUpdate, this, &MainWindow::onAnalysisUpdate);
+    m_controller->attachEngine(m_engine);
+}
+
+void MainWindow::onPhaseChanged(GameController::Phase phase) {
+    switch (phase) {
+    case GameController::Phase::Idle:
+        m_turnLabel->setText(QString());
+        break;
+    case GameController::Phase::HumanTurn:
+        m_turnLabel->setText(tr("Your turn"));
+        break;
+    case GameController::Phase::EngineThinking:
+        m_turnLabel->setText(tr("Engine thinking…"));
+        break;
+    case GameController::Phase::GameOver:
+        m_turnLabel->setText(tr("Game over"));
+        break;
+    }
+    if (m_game)
+        m_boardView->update();
+}
+
+void MainWindow::onGameOver(Stone winner, const QString& reason) {
+    QString text;
+    if (reason == "two passes") {
+        const ScoreResult s = m_controller->finalScore();
+        text = tr("%1 wins by %2 points (two passes)")
+                   .arg(winner == Stone::Black ? tr("Black") : tr("White"))
+                   .arg(qAbs(s.blackMargin));
+    } else if (reason == "resign") {
+        text = tr("%1 wins by resignation")
+                   .arg(winner == Stone::Black ? tr("Black") : tr("White"));
+    } else {
+        text = tr("Game over: %1").arg(reason);
+    }
+    QMessageBox::information(this, tr("Game over"), text);
 }
 
 void MainWindow::onEngineStart(const EngineConfig& cfg) {
@@ -108,12 +153,14 @@ void MainWindow::setupMenus() {
     quitAct->setShortcut(QKeySequence::Quit);
 
     QMenu* game = menuBar()->addMenu(tr("&Game"));
-    QMenu* newMenu = game->addMenu(tr("&New"));
-    connect(newMenu->addAction(tr("19 x 19")), &QAction::triggered,
+    QAction* newAct = game->addAction(tr("&New..."), this, &MainWindow::onNewGameDialog);
+    newAct->setShortcut(QKeySequence::New);
+    QMenu* quickMenu = game->addMenu(tr("Quick &Start"));
+    connect(quickMenu->addAction(tr("19 x 19")), &QAction::triggered,
             this, &MainWindow::onNewGame19);
-    connect(newMenu->addAction(tr("13 x 13")), &QAction::triggered,
+    connect(quickMenu->addAction(tr("13 x 13")), &QAction::triggered,
             this, &MainWindow::onNewGame13);
-    connect(newMenu->addAction(tr("9 x 9")), &QAction::triggered,
+    connect(quickMenu->addAction(tr("9 x 9")), &QAction::triggered,
             this, &MainWindow::onNewGame9);
     QAction* undoAct = game->addAction(tr("&Undo"), this, &MainWindow::onUndo);
     undoAct->setShortcut(QKeySequence::Undo);
@@ -122,11 +169,19 @@ void MainWindow::setupMenus() {
 }
 
 void MainWindow::newGame(int size) {
+    GameSetup setup;
+    setup.boardSize = size;
+    startGame(setup);
+}
+
+void MainWindow::startGame(const GameSetup& setup) {
     if (!confirmDiscard()) return;
-    delete m_game;
-    m_game = new Game(size);
     m_currentFile.clear();
     m_dirty = false;
+    // wire the play controller (replaces the raw-Game edit path)
+    m_controller->newGame(setup);
+    delete m_game;
+    m_game = m_controller->game();
     m_boardView->setGame(m_game);
     setWindowTitle(tr("YiGo 弈境"));
     refreshStatus();
@@ -136,8 +191,25 @@ void MainWindow::onNewGame19() { newGame(19); }
 void MainWindow::onNewGame13() { newGame(13); }
 void MainWindow::onNewGame9()  { newGame(9); }
 
+void MainWindow::onNewGameDialog() {
+    if (!confirmDiscard()) return;
+    NewGameDialog dlg(this);
+    if (dlg.exec() != QDialog::Accepted) return;
+    startGame(dlg.setup());
+}
+
 void MainWindow::onBoardClicked(QPoint pos) {
-    if (!m_game) return;
+    if (!m_game || !m_controller) return;
+    // play mode: route through the controller state machine
+    if (m_controller->phase() != GameController::Phase::Idle
+        && m_controller->phase() != GameController::Phase::GameOver) {
+        if (!m_controller->humanPlay(pos)) return;   // rejection hint via signal
+        markDirty();
+        m_boardView->update();
+        refreshStatus();
+        return;
+    }
+    // review/edit path (no game started via controller or game over)
     QString hint;
     if (!MainWindowLogic::handleBoardClick(*m_game, pos, &hint)) {
         statusBar()->showMessage(hint, 2000);   // no modal per spec §6
