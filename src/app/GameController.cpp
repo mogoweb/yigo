@@ -53,6 +53,15 @@ void GameController::newGame(const GameSetup& setup) {
     advanceTurn();
 }
 
+Game* GameController::detachGame() {
+    Game* g = m_game;
+    m_game = nullptr;
+    m_movePending = false;
+    m_phase = Phase::Idle;
+    Q_EMIT phaseChanged(m_phase);
+    return g;
+}
+
 bool GameController::humanPlay(QPoint pos) {
     if (!m_game || m_phase != Phase::HumanTurn || m_movePending) {
         Q_EMIT moveRejected(QStringLiteral("Not your turn"));
@@ -70,7 +79,16 @@ bool GameController::humanPlay(QPoint pos) {
         Q_EMIT moveRejected(QStringLiteral("Illegal move"));
         return false;
     }
-    m_lastWasPass = pos.x() < 0 && m_phase != Phase::GameOver ? m_lastWasPass : false;
+    // C4 fix: human pass closes the two-pass game when the engine just passed
+    if (pos.x() < 0) {
+        if (m_lastWasPass) {
+            scoreEnd();
+            return true;
+        }
+        m_lastWasPass = true;
+    } else {
+        m_lastWasPass = false;
+    }
     advanceTurn();
     return true;
 }
@@ -102,6 +120,9 @@ void GameController::advanceTurn() {
 void GameController::requestEngineMove() {
     if (m_movePending || !m_engine || !m_game) return;
     m_movePending = true;
+    // C3 fix: the live analysis stream pauses the codec and swallows
+    // non-info responses — interrupt it before sending genmove
+    m_engine->stopAnalysis();
     // position sync first, then genmove; the genmove id is the LAST one so
     // its response can be paired via m_genmoveId
     const QStringList cmds = AnalysisParser::positionCommands(*m_game);

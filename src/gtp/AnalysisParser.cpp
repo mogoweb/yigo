@@ -133,6 +133,13 @@ QStringList AnalysisParser::positionCommands(const Game& game) {
     QStringList cmds;
     cmds << QString("boardsize %1").arg(game.boardSize());
     cmds << QStringLiteral("clear_board");
+    // handicap / AB setup stones must reach the engine too (review I5)
+    for (const auto& st : game.setupStones()) {
+        if (st.second == Stone::Empty) continue;
+        cmds << QString("play %1 %2")
+                    .arg(st.second == Stone::Black ? "B" : "W")
+                    .arg(posToGtp(st.first, game.boardSize()));
+    }
     cmds << QString("komi %1").arg(game.rules().komi);
     // replay the path root -> current
     QVector<MoveNode*> path = game.tree().pathTo(game.currentNode());

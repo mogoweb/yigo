@@ -108,6 +108,10 @@ void EngineProcess::query(quint64 id, const QString& command) {
 void EngineProcess::sendCommandSequence(const QStringList& cmds) {
     for (const QString& c : cmds)
         query(m_nextId++, c);
+    // review I7: the sequence includes a genmove — arm the 30s timeout so a
+    // wedged engine cannot leave the caller waiting forever
+    if (!cmds.isEmpty())
+        armQueryTimeout();
 }
 
 void EngineProcess::analyzePosition(const Game& game, const AnalysisQuery& q) {
