@@ -41,6 +41,11 @@ public:
     const QVector<QPair<QPoint, Stone>>& setupStones() const { return m_setupStones; }
     void addSetupStone(QPoint pos, Stone color) { m_setupStones.append(qMakePair(pos, color)); }
 
+    // standard handicap star-point placement; n is 0-based index
+    static QPoint handicapPoint(int boardSize, int n);
+    // apply n handicap black stones as setup stones (n=0 clears)
+    void setupHandicap(int stones);
+
     // internal helpers used by SgfParser: move the cursor without replaying
     // (caller then rebuilds via rewindTo or continues building the tree)
     void advanceTo(MoveNode* node) { m_current = node; }
