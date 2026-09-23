@@ -194,6 +194,32 @@ private slots:
         QTRY_COMPARE(gc.phase(), GameController::Phase::HumanTurn);
         ep.stop();
     }
+    void twoPassScoresLocally() {
+        // 9路：人下1子，AI pass，人 pass → 两虚手终局，中国规则黑=1子
+        qputenv("YIGO_FAKE_GENMOVE", "pass");
+        GameSetup setup;
+        setup.boardSize = 9;
+        setup.black.kind = PlayerConfig::Human;
+        setup.white.kind = PlayerConfig::AI;
+        GameController gc;
+        EngineProcess ep;
+        QVERIFY(ep.start(fakeCfg()));
+        gc.attachEngine(&ep);
+        QSignalSpy over(&gc, &GameController::gameOver);
+        gc.newGame(setup);
+        QVERIFY(gc.humanPlay(QPoint(0, 0)));
+        QTRY_COMPARE(gc.phase(), GameController::Phase::HumanTurn);
+        QVERIFY(gc.humanPlay(QPoint(-1, -1)));          // 两虚手 → 终局
+        QTRY_COMPARE(gc.phase(), GameController::Phase::GameOver);
+        QCOMPARE(over.count(), 1);
+        const ScoreResult s = gc.finalScore();
+        // 中国规则: 1 黑子 + 80 空点全归黑（白虚手后空域只接触黑）= 81
+        QCOMPARE(s.blackScore, 81.0);
+        QCOMPARE(s.whiteScore, 0.0);
+        QCOMPARE(gc.winner(), Stone::Black);
+        qunsetenv("YIGO_FAKE_GENMOVE");
+        ep.stop();
+    }
 };
 QTEST_GUILESS_MAIN(TestGameController)
 #include "tst_gamecontroller.moc"
