@@ -157,6 +157,43 @@ private slots:
         QCOMPARE(rej.count(), 1);
         ep.stop();
     }
+    void undoInPlayRemovesAIPair() {
+        // review focus 5: 悔棋退到玩家上一手之前
+        GameSetup setup;
+        setup.boardSize = 9;
+        setup.black.kind = PlayerConfig::Human;
+        setup.white.kind = PlayerConfig::AI;
+        GameController gc;
+        EngineProcess ep;
+        QVERIFY(ep.start(fakeCfg()));
+        gc.attachEngine(&ep);
+        gc.newGame(setup);
+        QVERIFY(gc.humanPlay(QPoint(2, 2)));                          // 人1
+        QTRY_COMPARE(gc.phase(), GameController::Phase::HumanTurn);   // AI 已回
+        QCOMPARE(gc.game()->currentNode()->moveNumber, 2);
+        QVERIFY(gc.undoInPlay());
+        QCOMPARE(gc.game()->currentNode()->moveNumber, 0);            // 退到人1之前
+        QCOMPARE(gc.phase(), GameController::Phase::HumanTurn);
+        QVERIFY(gc.humanPlay(QPoint(4, 4)));   // 继续可下
+        QTRY_COMPARE(gc.phase(), GameController::Phase::HumanTurn);
+        ep.stop();
+    }
+    void engineThinkingUndoRejected() {
+        GameSetup setup;
+        setup.boardSize = 9;
+        setup.black.kind = PlayerConfig::Human;
+        setup.white.kind = PlayerConfig::AI;
+        GameController gc;
+        EngineProcess ep;
+        QVERIFY(ep.start(fakeCfg()));
+        gc.attachEngine(&ep);
+        gc.newGame(setup);
+        QVERIFY(gc.humanPlay(QPoint(2, 2)));
+        QCOMPARE(gc.phase(), GameController::Phase::EngineThinking);
+        QCOMPARE(gc.undoInPlay(), false);   // EngineThinking
+        QTRY_COMPARE(gc.phase(), GameController::Phase::HumanTurn);
+        ep.stop();
+    }
 };
 QTEST_GUILESS_MAIN(TestGameController)
 #include "tst_gamecontroller.moc"

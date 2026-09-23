@@ -235,6 +235,15 @@ void MainWindow::refreshStatus() {
 
 void MainWindow::onUndo() {
     if (!m_game) return;
+    // play mode with controller: roll back the human+AI pair
+    if (m_controller
+        && (m_controller->phase() == GameController::Phase::HumanTurn
+            || m_controller->phase() == GameController::Phase::EngineThinking)) {
+        m_controller->undoInPlay();
+        m_boardView->update();
+        refreshStatus();
+        return;
+    }
     if (MainWindowLogic::handleAction(*m_game, MainWindowLogic::Action::Undo)) {
         markDirty();
         m_boardView->update();
