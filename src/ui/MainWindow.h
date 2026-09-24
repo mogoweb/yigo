@@ -5,8 +5,10 @@
 #include "GameController.h"
 #include "GameTree.h"
 #include "Game.h"
+#include "ReviewController.h"
 
 class BoardView;
+class ChartWinrate;
 class EnginePanel;
 class EngineProcess;
 class QLabel;
@@ -41,6 +43,10 @@ private slots:
     void onAnalysisUpdate(const AnalysisData& data);
     void onPhaseChanged(GameController::Phase phase);
     void onGameOver(Stone winner, const QString& reason);
+    void onReview();
+    void onReviewProgress(int moveNumber);
+    void onReviewFinished();
+    void onChartClicked(int moveNumber);
 
 private:
     void setupMenus();
@@ -61,4 +67,7 @@ private:
     EnginePanel* m_enginePanel = nullptr;
     AnalysisData m_lastAnalysis;
     GameController* m_controller = nullptr;
+    ReviewController* m_review = nullptr;
+    ChartWinrate* m_chart = nullptr;
+    bool m_reviewMode = false;
 };
