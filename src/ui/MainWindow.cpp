@@ -407,6 +407,7 @@ void MainWindow::onBoardClicked(QPoint pos) {
 }
 
 void MainWindow::refreshStatus() {
+    if (!m_game || !m_moveLabel || !m_turnLabel) return;   // ctor order safety
     m_moveLabel->setText(tr("Move %1").arg(m_game->currentNode()->moveNumber));
     const Stone who = m_game->nextToPlay();
     m_turnLabel->setText(who == Stone::Black ? tr("Black to play")
