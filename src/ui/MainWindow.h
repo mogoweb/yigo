@@ -22,6 +22,7 @@ public:
 protected:
     void keyPressEvent(QKeyEvent* e) override;
     void closeEvent(QCloseEvent* e) override;
+    void changeEvent(QEvent* e) override;
 
 private slots:
     void onBoardClicked(QPoint pos);
@@ -54,11 +55,30 @@ private slots:
 private:
     void setupMenus();
     void setupCentral();
+    void retranslateUi();
     void refreshStatus();
     void newGame(int size);
     void startGame(const GameSetup& setup);
     bool confirmDiscard();
     void markDirty() { m_dirty = true; }
+
+    // persistent widgets/actions retranslated on language change
+    QMenu* m_fileMenu = nullptr;
+    QMenu* m_langMenu = nullptr;
+    QMenu* m_gameMenu = nullptr;
+    QMenu* m_quickMenu = nullptr;
+    QAction* m_openAct = nullptr;
+    QAction* m_saveAct = nullptr;
+    QAction* m_quitAct = nullptr;
+    QAction* m_newAct = nullptr;
+    QAction* m_undoAct = nullptr;
+    QAction* m_passAct = nullptr;
+    QAction* m_reviewAct = nullptr;
+    QAction* m_langSystem = nullptr;
+    QAction* m_langZh = nullptr;
+    QAction* m_langEn = nullptr;
+    QDockWidget* m_engineDock = nullptr;
+    QDockWidget* m_chartDock = nullptr;
 
     Game* m_game = nullptr;
     BoardView* m_boardView = nullptr;

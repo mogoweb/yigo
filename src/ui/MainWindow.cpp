@@ -8,7 +8,9 @@
 #include "NewGameDialog.h"
 #include "SgfParser.h"
 
+#include <QApplication>
 #include <QDockWidget>
+#include <QEvent>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -18,6 +20,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QStatusBar>
+#include <QTranslator>
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle(tr("YiGo 弈境"));
@@ -62,9 +65,9 @@ void MainWindow::setupCentral() {
 
     // engine dock + process
     m_enginePanel = new EnginePanel(this);
-    auto* dock = new QDockWidget(tr("Engine"), this);
-    dock->setWidget(m_enginePanel);
-    addDockWidget(Qt::RightDockWidgetArea, dock);
+    m_engineDock = new QDockWidget(QString(), this);
+    m_engineDock->setWidget(m_enginePanel);
+    addDockWidget(Qt::RightDockWidgetArea, m_engineDock);
     m_engine = new EngineProcess(this);
     connect(m_enginePanel, &EnginePanel::startRequested, this, &MainWindow::onEngineStart);
     connect(m_enginePanel, &EnginePanel::stopRequested, this, &MainWindow::onEngineStop);
@@ -76,10 +79,10 @@ void MainWindow::setupCentral() {
 
     // review: bottom winrate chart dock + controller
     m_chart = new ChartWinrate(this);
-    auto* chartDock = new QDockWidget(tr("Winrate"), this);
-    chartDock->setWidget(m_chart);
-    addDockWidget(Qt::BottomDockWidgetArea, chartDock);
-    chartDock->hide();                     // review mode only
+    m_chartDock = new QDockWidget(QString(), this);
+    m_chartDock->setWidget(m_chart);
+    addDockWidget(Qt::BottomDockWidgetArea, m_chartDock);
+    m_chartDock->hide();                   // review mode only
     m_review = new ReviewController(this);
     connect(m_review, &ReviewController::progressed, this, &MainWindow::onReviewProgress);
     connect(m_review, &ReviewController::finished, this, &MainWindow::onReviewFinished);
@@ -94,12 +97,44 @@ void MainWindow::setupCentral() {
 }
 
 void MainWindow::onLanguageSelected(const QString& lang) {
-    // i18n: persist and ask for a restart (full retranslation needs re-UI)
+    // i18n: persist and hot-swap translators; Qt then broadcasts
+    // LanguageChange and every widget's changeEvent retranslates itself
     if (m_settings.language() == lang) return;
     m_settings.setLanguage(lang);
-    QMessageBox::information(
-        this, tr("Language changed"),
-        tr("Please restart the application to apply the language."));
+    const QList<QTranslator*> translators = QCoreApplication::instance()
+                                                ->findChildren<QTranslator*>();
+    for (QTranslator* t : translators) {
+        QCoreApplication::removeTranslator(t);
+        t->deleteLater();
+    }
+    QString effective = lang;
+    if (effective.isEmpty())
+        effective = QLocale::system().name().startsWith("zh")
+                        ? QStringLiteral("zh_CN") : QStringLiteral("en");
+    if (effective != QStringLiteral("en")) {
+        auto* translator = new QTranslator(qApp);
+        const QString name = QStringLiteral("yigo_") + effective;
+        if (translator->load(name, QStringLiteral(YIGO_TRANSLATIONS_DIR))
+            || translator->load(name,
+                 QStringLiteral("/usr/share/yigo/translations")))
+            qApp->installTranslator(translator);
+        else
+            translator->deleteLater();
+        auto* qtTranslator = new QTranslator(qApp);
+        if (qtTranslator->load(QStringLiteral("qtbase_") + effective,
+                QStringLiteral("/usr/share/qt5/translations")))
+            qApp->installTranslator(qtTranslator);
+    }
+    // removeTranslator/installTranslator post LanguageChange events; do one
+    // pass now as well so the change feels immediate
+    QEvent ev(QEvent::LanguageChange);
+    QApplication::sendEvent(this, &ev);
+}
+
+void MainWindow::changeEvent(QEvent* e) {
+    if (e->type() == QEvent::LanguageChange)
+        retranslateUi();
+    QMainWindow::changeEvent(e);
 }
 
 void MainWindow::onReview() {
@@ -108,7 +143,7 @@ void MainWindow::onReview() {
         return;
     }
     m_reviewMode = true;
-    m_chart->parentWidget()->show();
+    m_chartDock->show();
     m_review->startReview(m_game, m_engine);
     statusBar()->showMessage(tr("Reviewing…"), 3000);
 }
@@ -225,55 +260,87 @@ void MainWindow::onAnalysisUpdate(const AnalysisData& data) {
 }
 
 void MainWindow::setupMenus() {
-    QMenu* file = menuBar()->addMenu(tr("&File"));
-    QAction* openAct = file->addAction(tr("&Open..."), this, &MainWindow::onOpen);
-    openAct->setShortcut(QKeySequence::Open);
-    QAction* saveAct = file->addAction(tr("&Save As..."), this, &MainWindow::onSave);
-    saveAct->setShortcut(QKeySequence::Save);
-    file->addSeparator();
-    QAction* quitAct = file->addAction(tr("E&xit"), this, &QWidget::close);
-    quitAct->setShortcut(QKeySequence::Quit);
-    // language switcher: persists the choice; a restart applies it fully
-    QMenu* langMenu = file->addMenu(tr("&Language"));
-    QActionGroup* langGroup = new QActionGroup(langMenu);
+    m_fileMenu = menuBar()->addMenu(QString());
+    m_openAct = m_fileMenu->addAction(QString(), this, &MainWindow::onOpen);
+    m_openAct->setShortcut(QKeySequence::Open);
+    m_saveAct = m_fileMenu->addAction(QString(), this, &MainWindow::onSave);
+    m_saveAct->setShortcut(QKeySequence::Save);
+    m_fileMenu->addSeparator();
+    m_quitAct = m_fileMenu->addAction(QString(), this, &QWidget::close);
+    m_quitAct->setShortcut(QKeySequence::Quit);
+
+    // language switcher: applies immediately via dynamic retranslation
+    m_langMenu = m_fileMenu->addMenu(QString());
+    QActionGroup* langGroup = new QActionGroup(m_langMenu);
     langGroup->setExclusive(true);
     const QString current = m_settings.language();
     const QString systemLang = QLocale::system().name().startsWith("zh")
                                    ? QStringLiteral("zh_CN") : QStringLiteral("en");
-    auto addLang = [langMenu, langGroup, this](const QString& label,
-                                               const QString& code,
-                                               bool checked) {
-        QAction* a = langMenu->addAction(label);
-        a->setCheckable(true);
-        a->setChecked(checked);
-        connect(a, &QAction::triggered, this, [this, code] {
-            onLanguageSelected(code);
-        });
-    };
-    addLang(tr("Follow System"), QString(), current.isEmpty());
-    addLang(QStringLiteral("中文"), QStringLiteral("zh_CN"),
-            current == QStringLiteral("zh_CN")
-                || (current.isEmpty() && systemLang == QStringLiteral("zh_CN")));
-    addLang(QStringLiteral("English"), QStringLiteral("en"),
-            current == QStringLiteral("en")
-                || (current.isEmpty() && systemLang == QStringLiteral("en")));
+    m_langSystem = m_langMenu->addAction(QString());
+    m_langSystem->setCheckable(true);
+    m_langSystem->setChecked(current.isEmpty());
+    connect(m_langSystem, &QAction::triggered, this,
+            [this] { onLanguageSelected(QString()); });
+    m_langZh = m_langMenu->addAction(QStringLiteral("中文"));
+    m_langZh->setCheckable(true);
+    m_langZh->setChecked(current == QStringLiteral("zh_CN")
+                         || (current.isEmpty()
+                             && systemLang == QStringLiteral("zh_CN")));
+    connect(m_langZh, &QAction::triggered, this,
+            [this] { onLanguageSelected(QStringLiteral("zh_CN")); });
+    m_langEn = m_langMenu->addAction(QStringLiteral("English"));
+    m_langEn->setCheckable(true);
+    m_langEn->setChecked(current == QStringLiteral("en")
+                         || (current.isEmpty()
+                             && systemLang == QStringLiteral("en")));
+    connect(m_langEn, &QAction::triggered, this,
+            [this] { onLanguageSelected(QStringLiteral("en")); });
 
-    QMenu* game = menuBar()->addMenu(tr("&Game"));
-    QAction* newAct = game->addAction(tr("&New..."), this, &MainWindow::onNewGameDialog);
-    newAct->setShortcut(QKeySequence::New);
-    QMenu* quickMenu = game->addMenu(tr("Quick &Start"));
-    connect(quickMenu->addAction(tr("19 x 19")), &QAction::triggered,
-            this, &MainWindow::onNewGame19);
-    connect(quickMenu->addAction(tr("13 x 13")), &QAction::triggered,
-            this, &MainWindow::onNewGame13);
-    connect(quickMenu->addAction(tr("9 x 9")), &QAction::triggered,
-            this, &MainWindow::onNewGame9);
-    QAction* undoAct = game->addAction(tr("&Undo"), this, &MainWindow::onUndo);
-    undoAct->setShortcut(QKeySequence::Undo);
-    QAction* passAct = game->addAction(tr("&Pass"), this, &MainWindow::onPass);
-    passAct->setShortcut(tr("P"));
-    QAction* reviewAct = game->addAction(tr("&Analyze Game"), this, &MainWindow::onReview);
-    reviewAct->setShortcut(tr("Ctrl+R"));
+    m_gameMenu = menuBar()->addMenu(QString());
+    m_newAct = m_gameMenu->addAction(QString(), this, &MainWindow::onNewGameDialog);
+    m_newAct->setShortcut(QKeySequence::New);
+    m_quickMenu = m_gameMenu->addMenu(QString());
+    QAction* q19 = m_quickMenu->addAction(QString());
+    connect(q19, &QAction::triggered, this, &MainWindow::onNewGame19);
+    QAction* q13 = m_quickMenu->addAction(QString());
+    connect(q13, &QAction::triggered, this, &MainWindow::onNewGame13);
+    QAction* q9 = m_quickMenu->addAction(QString());
+    connect(q9, &QAction::triggered, this, &MainWindow::onNewGame9);
+    m_undoAct = m_gameMenu->addAction(QString(), this, &MainWindow::onUndo);
+    m_undoAct->setShortcut(QKeySequence::Undo);
+    m_passAct = m_gameMenu->addAction(QString(), this, &MainWindow::onPass);
+    m_passAct->setShortcut(tr("P"));
+    m_reviewAct = m_gameMenu->addAction(QString(), this, &MainWindow::onReview);
+    m_reviewAct->setShortcut(tr("Ctrl+R"));
+    retranslateUi();
+}
+
+void MainWindow::retranslateUi() {
+    // all persistent texts re-applied through tr(); called on startup and
+    // on every LanguageChange event so language switches apply instantly
+    setWindowTitle(tr("YiGo 弈境"));
+    m_fileMenu->setTitle(tr("&File"));
+    m_openAct->setText(tr("&Open..."));
+    m_saveAct->setText(tr("&Save As..."));
+    m_quitAct->setText(tr("E&xit"));
+    m_langMenu->setTitle(tr("&Language"));
+    m_langSystem->setText(tr("Follow System"));
+    // 中文 / English stay literal (self-describing language names)
+    m_gameMenu->setTitle(tr("&Game"));
+    m_newAct->setText(tr("&New..."));
+    m_quickMenu->setTitle(tr("Quick &Start"));
+    const QList<QAction*> quick = m_quickMenu->actions();
+    if (quick.size() == 3) {
+        quick[0]->setText(tr("19 x 19"));
+        quick[1]->setText(tr("13 x 13"));
+        quick[2]->setText(tr("9 x 9"));
+    }
+    m_undoAct->setText(tr("&Undo"));
+    m_passAct->setText(tr("&Pass"));
+    m_reviewAct->setText(tr("&Analyze Game"));
+    m_engineDock->setWindowTitle(tr("Engine"));
+    m_chartDock->setWindowTitle(tr("Winrate"));
+    refreshStatus();
 }
 
 void MainWindow::newGame(int size) {
