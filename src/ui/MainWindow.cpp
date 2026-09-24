@@ -68,7 +68,12 @@ void MainWindow::setupCentral() {
     connect(m_review, &ReviewController::progressed, this, &MainWindow::onReviewProgress);
     connect(m_review, &ReviewController::finished, this, &MainWindow::onReviewFinished);
     connect(m_review, &ReviewController::blunderFound, this,
-            [](int mv, Stone side) { Q_UNUSED(mv); Q_UNUSED(side); });
+            [this](int mv, Stone side) {
+                statusBar()->showMessage(
+                    tr("Blunder at move %1 (%2)")
+                        .arg(mv).arg(side == Stone::Black ? tr("Black") : tr("White")),
+                    4000);
+            });
     connect(m_chart, &ChartWinrate::moveClicked, this, &MainWindow::onChartClicked);
 }
 
@@ -232,7 +237,12 @@ void MainWindow::startGame(const GameSetup& setup) {
     if (!confirmDiscard()) return;
     m_currentFile.clear();
     m_dirty = false;
-    // the controller owns the Game — never delete through m_game (C1 fix)
+    // review holds main-line node pointers into the game being replaced —
+    // stop the batch first (review Critical #1)
+    m_review->stop();
+    if (m_chart) m_chart->setCurve(nullptr);
+    m_reviewMode = false;
+    // the controller owns the Game — never delete through m_game (M4 C1 fix)
     m_controller->newGame(setup);
     m_game = m_controller->game();
     m_boardView->setGame(m_game);
@@ -368,6 +378,10 @@ void MainWindow::keyPressEvent(QKeyEvent* e) {
 
 void MainWindow::onOpen() {
     if (!confirmDiscard()) return;
+    // review holds pointers into the current game — stop before replacing
+    m_review->stop();
+    m_chart->setCurve(nullptr);
+    m_reviewMode = false;
     const QString path = QFileDialog::getOpenFileName(this, tr("Open SGF"), QString(),
                                                       tr("SGF files (*.sgf)"));
     if (path.isEmpty()) return;

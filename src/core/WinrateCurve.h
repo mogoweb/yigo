@@ -23,6 +23,7 @@ public:
     double blunderThreshold() const { return m_threshold; }
 
 private:
+    void recomputeBlunder(WinratePoint& p, double prev);
     QVector<WinratePoint> m_points;
     double m_threshold = 0.05;
 };
