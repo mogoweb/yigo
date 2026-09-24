@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include "BoardView.h"
+#include "ChartWinrate.h"
 #include "EnginePanel.h"
 #include "EngineProcess.h"
 #include "MainWindowLogic.h"
@@ -56,6 +57,57 @@ void MainWindow::setupCentral() {
     connect(m_engine, &EngineProcess::errorOccurred, this, &MainWindow::onEngineError);
     connect(m_engine, &EngineProcess::analysisUpdate, this, &MainWindow::onAnalysisUpdate);
     m_controller->attachEngine(m_engine);
+
+    // review: bottom winrate chart dock + controller
+    m_chart = new ChartWinrate(this);
+    auto* chartDock = new QDockWidget(tr("Winrate"), this);
+    chartDock->setWidget(m_chart);
+    addDockWidget(Qt::BottomDockWidgetArea, chartDock);
+    chartDock->hide();                     // review mode only
+    m_review = new ReviewController(this);
+    connect(m_review, &ReviewController::progressed, this, &MainWindow::onReviewProgress);
+    connect(m_review, &ReviewController::finished, this, &MainWindow::onReviewFinished);
+    connect(m_review, &ReviewController::blunderFound, this,
+            [](int mv, Stone side) { Q_UNUSED(mv); Q_UNUSED(side); });
+    connect(m_chart, &ChartWinrate::moveClicked, this, &MainWindow::onChartClicked);
+}
+
+void MainWindow::onReview() {
+    if (!m_game || !m_engine || !m_engine->isRunning()) {
+        QMessageBox::warning(this, tr("Review"), tr("Start the engine first"));
+        return;
+    }
+    m_reviewMode = true;
+    m_chart->parentWidget()->show();
+    m_review->startReview(m_game, m_engine);
+    statusBar()->showMessage(tr("Reviewing…"), 3000);
+}
+
+void MainWindow::onReviewProgress(int moveNumber) {
+    m_chart->setCurve(&m_review->curve());
+    m_chart->setCurrentMove(moveNumber);
+    m_boardView->update();     // board follows the review cursor
+    refreshStatus();
+}
+
+void MainWindow::onReviewFinished() {
+    statusBar()->showMessage(m_review->isRunning()
+                                 ? tr("Review aborted")
+                                 : tr("Review complete"), 4000);
+}
+
+void MainWindow::onChartClicked(int moveNumber) {
+    if (!m_reviewMode || !m_game) return;
+    const auto ml = m_game->tree().mainLine();
+    for (MoveNode* n : ml) {
+        if (n->moveNumber == moveNumber) {
+            m_game->goTo(n);
+            m_chart->setCurrentMove(moveNumber);
+            m_boardView->update();
+            refreshStatus();
+            return;
+        }
+    }
 }
 
 void MainWindow::onPhaseChanged(GameController::Phase phase) {
@@ -166,6 +218,8 @@ void MainWindow::setupMenus() {
     undoAct->setShortcut(QKeySequence::Undo);
     QAction* passAct = game->addAction(tr("&Pass"), this, &MainWindow::onPass);
     passAct->setShortcut(tr("P"));
+    QAction* reviewAct = game->addAction(tr("&Analyze Game"), this, &MainWindow::onReview);
+    reviewAct->setShortcut(tr("Ctrl+R"));
 }
 
 void MainWindow::newGame(int size) {
