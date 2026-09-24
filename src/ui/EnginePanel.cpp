@@ -44,6 +44,12 @@ EngineConfig EnginePanel::config() const {
     return cfg;
 }
 
+void EnginePanel::setConfig(const EngineConfig& cfg) {
+    m_type->setCurrentIndex(cfg.type == EngineConfig::KataGo ? 0 : 1);
+    m_path->setText(cfg.executable);
+    m_args->setText(cfg.baseArgs.join(' '));
+}
+
 void EnginePanel::setStatus(const QString& text, bool error) {
     m_status->setText(text);
     m_status->setStyleSheet(error ? "color: #d44;" : QString());

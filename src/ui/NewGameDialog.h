@@ -13,6 +13,7 @@ class NewGameDialog : public QDialog {
 public:
     explicit NewGameDialog(QWidget* parent = nullptr);
     GameSetup setup() const;
+    void setSetup(const GameSetup& s);
 
 private:
     QComboBox* m_size = nullptr;
