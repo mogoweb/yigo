@@ -30,4 +30,10 @@ target_compile_definitions(tst_gamecontroller PRIVATE
 target_link_libraries(tst_gamecontroller PRIVATE yigo_core Qt5::Test)
 add_test(NAME tst_gamecontroller COMMAND tst_gamecontroller)
 
+add_executable(tst_reviewcontroller tst_reviewcontroller.cpp)
+target_compile_definitions(tst_reviewcontroller PRIVATE
+    FAKE_ENGINE="${CMAKE_SOURCE_DIR}/tests/data/fake_engine.sh")
+target_link_libraries(tst_reviewcontroller PRIVATE yigo_core Qt5::Test)
+add_test(NAME tst_reviewcontroller COMMAND tst_reviewcontroller)
+
 yigo_add_test(tst_winratecurve)
