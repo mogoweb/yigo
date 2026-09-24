@@ -17,6 +17,9 @@ public:
     void setGameSetup(const GameSetup& s);
     QByteArray windowGeometry() const;
     void setWindowGeometry(const QByteArray& geo);
+    // UI language: empty = follow system locale; otherwise e.g. "zh_CN", "en"
+    QString language() const;
+    void setLanguage(const QString& lang);
 
 private:
     QString m_iniPath;

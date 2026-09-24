@@ -68,3 +68,14 @@ void AppSettings::setWindowGeometry(const QByteArray& geo) {
     s.setValue("window/geometry", geo);
     s.sync();
 }
+
+QString AppSettings::language() const {
+    QSettings s = makeSettings(m_iniPath);
+    return s.value("ui/language").toString();
+}
+
+void AppSettings::setLanguage(const QString& lang) {
+    QSettings s = makeSettings(m_iniPath);
+    s.setValue("ui/language", lang);
+    s.sync();
+}
