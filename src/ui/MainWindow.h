@@ -49,6 +49,7 @@ private slots:
     void onReviewProgress(int moveNumber);
     void onReviewFinished();
     void onChartClicked(int moveNumber);
+    void onLanguageSelected(const QString& lang);
 
 private:
     void setupMenus();

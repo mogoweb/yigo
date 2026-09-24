@@ -14,6 +14,7 @@
 #include <QFileInfo>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QLocale>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QStatusBar>
@@ -90,6 +91,15 @@ void MainWindow::setupCentral() {
                     4000);
             });
     connect(m_chart, &ChartWinrate::moveClicked, this, &MainWindow::onChartClicked);
+}
+
+void MainWindow::onLanguageSelected(const QString& lang) {
+    // i18n: persist and ask for a restart (full retranslation needs re-UI)
+    if (m_settings.language() == lang) return;
+    m_settings.setLanguage(lang);
+    QMessageBox::information(
+        this, tr("Language changed"),
+        tr("Please restart the application to apply the language."));
 }
 
 void MainWindow::onReview() {
@@ -223,6 +233,30 @@ void MainWindow::setupMenus() {
     file->addSeparator();
     QAction* quitAct = file->addAction(tr("E&xit"), this, &QWidget::close);
     quitAct->setShortcut(QKeySequence::Quit);
+    // language switcher: persists the choice; a restart applies it fully
+    QMenu* langMenu = file->addMenu(tr("&Language"));
+    QActionGroup* langGroup = new QActionGroup(langMenu);
+    langGroup->setExclusive(true);
+    const QString current = m_settings.language();
+    const QString systemLang = QLocale::system().name().startsWith("zh")
+                                   ? QStringLiteral("zh_CN") : QStringLiteral("en");
+    auto addLang = [langMenu, langGroup, this](const QString& label,
+                                               const QString& code,
+                                               bool checked) {
+        QAction* a = langMenu->addAction(label);
+        a->setCheckable(true);
+        a->setChecked(checked);
+        connect(a, &QAction::triggered, this, [this, code] {
+            onLanguageSelected(code);
+        });
+    };
+    addLang(tr("Follow System"), QString(), current.isEmpty());
+    addLang(QStringLiteral("中文"), QStringLiteral("zh_CN"),
+            current == QStringLiteral("zh_CN")
+                || (current.isEmpty() && systemLang == QStringLiteral("zh_CN")));
+    addLang(QStringLiteral("English"), QStringLiteral("en"),
+            current == QStringLiteral("en")
+                || (current.isEmpty() && systemLang == QStringLiteral("en")));
 
     QMenu* game = menuBar()->addMenu(tr("&Game"));
     QAction* newAct = game->addAction(tr("&New..."), this, &MainWindow::onNewGameDialog);
