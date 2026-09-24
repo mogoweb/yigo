@@ -7,6 +7,7 @@
 #include <cstdio>
 #include "BoardView.h"
 #include "BoardGeometry.h"
+#include "ChartWinrate.h"
 
 static bool isDarkGrid(QRgb c) {
     // grid color is (60,45,25); allow antialias spread
@@ -113,6 +114,32 @@ static int checkAlignment(QSize size, int boardSize) {
     return 0;
 }
 
+// chart regression (M5 Task 3): winrate segments colored by black's gain
+static int checkChart() {
+    WinrateCurve c;
+    c.setPoint(0, 0.5);
+    c.setPoint(1, 0.7);   // black gains 20% -> blue segment
+    c.setPoint(2, 0.3);   // black loses 40% -> red segment
+    ChartWinrate w;
+    w.setCurve(&c);
+    w.setCurrentMove(1);
+    w.resize(300, 150);
+    const QImage img = w.grab().toImage();
+    bool hasRed = false, hasBlue = false;
+    for (int y = 0; y < 150 && !(hasRed && hasBlue); ++y)
+        for (int x = 0; x < 300 && !(hasRed && hasBlue); ++x) {
+            const QRgb px = img.pixel(x, y);
+            if (qRed(px) > 180 && qGreen(px) < 110 && qBlue(px) < 110) hasRed = true;
+            if (qBlue(px) > 180 && qRed(px) < 110) hasBlue = true;
+        }
+    if (!hasRed || !hasBlue) {
+        std::printf("FAIL: chart segment colors missing (red=%d blue=%d)\n",
+                    hasRed, hasBlue);
+        return 1;
+    }
+    return 0;
+}
+
 int main(int argc, char** argv) {
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app(argc, argv);
@@ -122,6 +149,7 @@ int main(int argc, char** argv) {
     failures += checkAlignment(QSize(600, 400), 9);
     failures += checkAlignment(QSize(800, 600), 19);
     failures += checkOverlay();
+    failures += checkChart();
     std::printf("%s\n", failures == 0 ? "ALL OK" : "FAILURES");
     return failures;
 }
