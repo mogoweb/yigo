@@ -29,3 +29,5 @@ target_compile_definitions(tst_gamecontroller PRIVATE
     FAKE_ENGINE="${CMAKE_SOURCE_DIR}/tests/data/fake_engine.sh")
 target_link_libraries(tst_gamecontroller PRIVATE yigo_core Qt5::Test)
 add_test(NAME tst_gamecontroller COMMAND tst_gamecontroller)
+
+yigo_add_test(tst_winratecurve)

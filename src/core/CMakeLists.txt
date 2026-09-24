@@ -5,6 +5,7 @@ add_library(yigo_core STATIC
     Game.cpp
     SgfCoord.cpp
     SgfParser.cpp
+    WinrateCurve.cpp
     ${CMAKE_SOURCE_DIR}/src/app/MainWindowLogic.cpp
     ${CMAKE_SOURCE_DIR}/src/app/GameController.cpp
     ${CMAKE_SOURCE_DIR}/src/gtp/GtpClient.cpp
