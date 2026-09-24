@@ -8,6 +8,7 @@ add_library(yigo_core STATIC
     WinrateCurve.cpp
     ${CMAKE_SOURCE_DIR}/src/app/MainWindowLogic.cpp
     ${CMAKE_SOURCE_DIR}/src/app/GameController.cpp
+    ${CMAKE_SOURCE_DIR}/src/app/ReviewController.cpp
     ${CMAKE_SOURCE_DIR}/src/gtp/GtpClient.cpp
     ${CMAKE_SOURCE_DIR}/src/gtp/AnalysisParser.cpp
     ${CMAKE_SOURCE_DIR}/src/gtp/EngineProcess.cpp
