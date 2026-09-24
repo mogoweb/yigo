@@ -1,5 +1,6 @@
 #include "EnginePanel.h"
 #include <QComboBox>
+#include <QEvent>
 #include <QFormLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -11,25 +12,47 @@ EnginePanel::EnginePanel(QWidget* parent) : QWidget(parent) {
     m_type = new QComboBox(this);
     m_type->addItem("KataGo");          // index 0 -> KataGo
     m_type->addItem("LeelaZero");       // index 1 -> LeelaZero
-    form->addRow(tr("Engine"), m_type);
+    m_engineLabel = new QLabel(this);
+    form->addRow(m_engineLabel, m_type);
     m_path = new QLineEdit(this);
-    m_path->setPlaceholderText(tr("/path/to/katago"));
-    form->addRow(tr("Executable"), m_path);
+    m_execLabel = new QLabel(this);
+    form->addRow(m_execLabel, m_path);
     m_args = new QLineEdit(this);
-    m_args->setPlaceholderText(tr("-model weights.bin.gz -config analysis.cfg"));
-    form->addRow(tr("Arguments"), m_args);
-    m_status = new QLabel(tr("Stopped"), this);
+    m_argsLabel = new QLabel(this);
+    form->addRow(m_argsLabel, m_args);
+    m_status = new QLabel(this);
     form->addRow(m_status);
-    m_toggle = new QPushButton(tr("Start"), this);
+    m_toggle = new QPushButton(this);
     form->addRow(m_toggle);
-    connect(m_toggle, &QPushButton::clicked, this, [this] {
-        if (m_running) { Q_EMIT stopRequested(); return; }
-        if (m_path->text().trimmed().isEmpty()) {
-            setStatus(tr("Engine path required"), true);
-            return;
-        }
-        Q_EMIT startRequested(config());
-    });
+    m_running = false;
+    retranslateUi();
+    connect(m_toggle, &QPushButton::clicked, this, &EnginePanel::onToggleClicked);
+}
+
+void EnginePanel::retranslateUi() {
+    m_engineLabel->setText(tr("Engine"));
+    m_execLabel->setText(tr("Executable"));
+    m_argsLabel->setText(tr("Arguments"));
+    m_path->setPlaceholderText(tr("/path/to/katago"));
+    m_args->setPlaceholderText(tr("-model weights.bin.gz -config analysis.cfg"));
+    m_status->setText(tr("Stopped"));
+    m_toggle->setText(m_running ? tr("Stop") : tr("Start"));
+}
+
+void EnginePanel::changeEvent(QEvent* e) {
+    // dynamic retranslation: refresh all static texts on language change
+    if (e->type() == QEvent::LanguageChange)
+        retranslateUi();
+    QWidget::changeEvent(e);
+}
+
+void EnginePanel::onToggleClicked() {
+    if (m_running) { Q_EMIT stopRequested(); return; }
+    if (m_path->text().trimmed().isEmpty()) {
+        setStatus(tr("Engine path required"), true);
+        return;
+    }
+    Q_EMIT startRequested(config());
 }
 
 EngineConfig EnginePanel::config() const {

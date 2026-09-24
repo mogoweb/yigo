@@ -2,9 +2,10 @@
 #include <QWidget>
 #include "EngineConfig.h"
 
-class QLineEdit;
 class QComboBox;
+class QDoubleSpinBox;
 class QLabel;
+class QLineEdit;
 class QPushButton;
 
 class EnginePanel : public QWidget {
@@ -20,10 +21,21 @@ signals:
     void startRequested(const EngineConfig& cfg);
     void stopRequested();
 
+protected:
+    void changeEvent(QEvent* e) override;
+
+private slots:
+    void onToggleClicked();
+
 private:
+    void retranslateUi();
+
+    QComboBox* m_type = nullptr;
     QLineEdit* m_path = nullptr;
     QLineEdit* m_args = nullptr;
-    QComboBox* m_type = nullptr;
+    QLabel* m_engineLabel = nullptr;
+    QLabel* m_execLabel = nullptr;
+    QLabel* m_argsLabel = nullptr;
     QLabel* m_status = nullptr;
     QPushButton* m_toggle = nullptr;
     bool m_running = false;
