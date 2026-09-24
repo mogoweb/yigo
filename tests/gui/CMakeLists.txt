@@ -10,7 +10,8 @@ set(CMAKE_AUTOMOC ON)
 function(yigo_add_gui_probe name)
     add_executable(${name} ${name}.cpp
         ${CMAKE_SOURCE_DIR}/src/ui/BoardView.cpp
-        ${CMAKE_SOURCE_DIR}/src/ui/BoardGeometry.cpp)
+        ${CMAKE_SOURCE_DIR}/src/ui/BoardGeometry.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ChartWinrate.cpp)
     target_include_directories(${name} PRIVATE ${GUI_PROBE_INCLUDES})
     target_link_libraries(${name} PRIVATE ${GUI_PROBE_LIBS})
     # offscreen platform: no display needed, works in CI and headless shells
@@ -24,6 +25,7 @@ yigo_add_gui_probe(click_probe)
 # colscan is a diagnostic tool (prints where lines landed), not a pass/fail test
 add_executable(colscan EXCLUDE_FROM_ALL colscan.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/BoardView.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/BoardGeometry.cpp)
+    ${CMAKE_SOURCE_DIR}/src/ui/BoardGeometry.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/ChartWinrate.cpp)
 target_include_directories(colscan PRIVATE ${GUI_PROBE_INCLUDES})
 target_link_libraries(colscan PRIVATE ${GUI_PROBE_LIBS})
