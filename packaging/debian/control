@@ -1,8 +1,8 @@
 Package: yigo
 Version: 0.5.0
 Architecture: amd64
+Maintainer: alex <mogoweb@gmail.com>
 Depends: libqt5core5a (>= 5.11), libqt5gui5 (>= 5.11), libqt5widgets5 (>= 5.11)
-Installed-Size: 20480
 Description: Cross-platform Go (Weiqi) AI analysis and review tool
  YiGo is a native Qt C++ Go analysis and review application inspired by
  Katrain. It integrates GTP engines such as KataGo and Leela Zero for
