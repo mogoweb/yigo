@@ -13,3 +13,23 @@ add_subdirectory(src/ui)
 enable_testing()
 add_subdirectory(tests)
 add_subdirectory(tests/gui)
+
+# Debian packaging: builds a .deb from the already-built binary
+find_program(DPKG_DEB_EXECUTABLE dpkg-deb)
+if(DPKG_DEB_EXECUTABLE)
+    add_custom_target(deb
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/debroot/DEBIAN
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/debroot/usr/bin
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/debroot/usr/share/applications
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/debroot/usr/share/icons/hicolor/scalable/apps
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/src/ui/yigo ${CMAKE_BINARY_DIR}/debroot/usr/bin/yigo
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/packaging/debian/yigo.desktop ${CMAKE_BINARY_DIR}/debroot/usr/share/applications/yigo.desktop
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/packaging/icon.svg ${CMAKE_BINARY_DIR}/debroot/usr/share/icons/hicolor/scalable/apps/yigo.svg
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/packaging/debian/control ${CMAKE_BINARY_DIR}/debroot/DEBIAN/control
+        COMMAND ${DPKG_DEB_EXECUTABLE} --build --root-owner-group
+                ${CMAKE_BINARY_DIR}/debroot ${CMAKE_BINARY_DIR}/yigo_0.5.0_amd64.deb
+        DEPENDS yigo
+        COMMENT "Building yigo_0.5.0_amd64.deb"
+        VERBATIM
+    )
+endif()

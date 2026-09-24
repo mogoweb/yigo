@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=YiGo 弈境
+Name[zh_CN]=弈境
+Comment=Go AI analysis and review
+Comment[zh_CN]=围棋 AI 复盘分析
+Exec=yigo
+Icon=yigo
+Terminal=false
+Categories=Game;BoardGame;
+Keywords=go;baduk;weiqi;katago;
