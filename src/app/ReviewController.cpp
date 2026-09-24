@@ -57,6 +57,9 @@ void ReviewController::analyzeNext() {
         ++m_cursor;                        // skip already-analyzed nodes
     if (m_cursor >= m_mainLine.size()) {
         m_running = false;
+        // review Important #2: stop the last analysis stream — a real engine
+        // would otherwise spin at 100% CPU after "Review complete"
+        m_engine->stopAnalysis();
         Q_EMIT finished();
         return;
     }
@@ -83,7 +86,8 @@ void ReviewController::onAnalysisUpdate(const AnalysisData& data) {
 }
 
 void ReviewController::checkBlunder(const MoveNode* n) {
-    // compare against the previous analyzed point on the curve
+    // delegate to the curve's own detection (single source of truth,
+    // review Minor #5) — signal only, flag is set inside setPoint
     const auto& pts = m_curve.points();
     double prev = -1.0;
     for (int i = pts.size() - 1; i >= 0; --i) {
@@ -118,5 +122,7 @@ void ReviewController::onCrashed(int) {
 void ReviewController::onEngineError(const QString&) {
     m_running = false;
     m_awaitReply = false;
+    if (m_engine)
+        m_engine->stopAnalysis();   // review Important #2: no runaway stream
     Q_EMIT finished();
 }

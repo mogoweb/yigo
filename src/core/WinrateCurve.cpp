@@ -30,17 +30,35 @@ void WinrateCurve::rebuild(const QVector<MoveNode*>& mainLine) {
 }
 
 void WinrateCurve::setPoint(int moveNumber, double winrate) {
-    for (WinratePoint& p : m_points)
-        if (p.moveNumber == moveNumber) {
-            p.winrate = winrate;
+    // find insertion position and the previous analyzed point
+    int pos = 0;
+    double prev = -1.0;
+    for (int i = 0; i < m_points.size(); ++i) {
+        if (m_points[i].moveNumber == moveNumber) {
+            m_points[i].winrate = winrate;
+            recomputeBlunder(m_points[i], prev);
             return;
         }
+        if (m_points[i].moveNumber < moveNumber) {
+            pos = i + 1;
+            prev = m_points[i].winrate;   // last point before the insertion
+        }
+    }
     WinratePoint p;
     p.moveNumber = moveNumber;
     p.winrate = winrate;
-    m_points.append(p);
-    std::sort(m_points.begin(), m_points.end(),
-              [](const WinratePoint& a, const WinratePoint& b) {
-                  return a.moveNumber < b.moveNumber;
-              });
+    recomputeBlunder(p, prev);
+    m_points.insert(pos, p);
+}
+
+void WinrateCurve::recomputeBlunder(WinratePoint& p, double prev) {
+    // review Important #3: blunder flags must be live on first-pass review
+    if (prev < 0.0 || p.sideToMove == Stone::Empty) {
+        p.blunder = false;
+        return;
+    }
+    const double gain = p.sideToMove == Stone::Black
+                            ? (p.winrate - prev)
+                            : (prev - p.winrate);
+    p.blunder = gain < -m_threshold;
 }
