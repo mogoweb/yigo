@@ -12,6 +12,7 @@ class EnginePanel : public QWidget {
 public:
     explicit EnginePanel(QWidget* parent = nullptr);
     EngineConfig config() const;
+    void setConfig(const EngineConfig& cfg);
     void setStatus(const QString& text, bool error = false);
     void setRunning(bool running);
 

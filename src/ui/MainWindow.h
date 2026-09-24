@@ -1,6 +1,7 @@
 #pragma once
 #include <QMainWindow>
 
+#include "AppSettings.h"
 #include "EngineConfig.h"
 #include "GameController.h"
 #include "GameTree.h"
@@ -20,6 +21,7 @@ public:
 
 protected:
     void keyPressEvent(QKeyEvent* e) override;
+    void closeEvent(QCloseEvent* e) override;
 
 private slots:
     void onBoardClicked(QPoint pos);
@@ -70,4 +72,5 @@ private:
     ReviewController* m_review = nullptr;
     ChartWinrate* m_chart = nullptr;
     bool m_reviewMode = false;
+    AppSettings m_settings;
 };

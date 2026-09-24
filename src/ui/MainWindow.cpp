@@ -23,7 +23,22 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     resize(800, 600);
     setupCentral();
     setupMenus();
-    newGame(19);
+    // restore persisted state: game setup, engine config, window geometry
+    const GameSetup setup = m_settings.gameSetup();
+    startGame(setup);
+    m_enginePanel->setConfig(m_settings.engineConfig());
+    const QByteArray geo = m_settings.windowGeometry();
+    if (!geo.isEmpty())
+        restoreGeometry(geo);
+}
+
+void MainWindow::closeEvent(QCloseEvent* e) {
+    m_settings.setWindowGeometry(saveGeometry());
+    if (m_enginePanel)
+        m_settings.setEngineConfig(m_enginePanel->config());
+    if (m_engine)
+        m_engine->stop();
+    e->accept();
 }
 
 void MainWindow::setupCentral() {
@@ -256,7 +271,9 @@ void MainWindow::onNewGame9()  { newGame(9); }
 
 void MainWindow::onNewGameDialog() {
     NewGameDialog dlg(this);
+    dlg.setSetup(m_settings.gameSetup());
     if (dlg.exec() != QDialog::Accepted) return;   // confirmDiscard inside startGame
+    m_settings.setGameSetup(dlg.setup());
     startGame(dlg.setup());
 }
 

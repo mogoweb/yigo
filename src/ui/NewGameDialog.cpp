@@ -35,6 +35,15 @@ NewGameDialog::NewGameDialog(QWidget* parent) : QDialog(parent) {
     layout->addWidget(buttons);
 }
 
+void NewGameDialog::setSetup(const GameSetup& s) {
+    const int idx = m_size->findData(s.boardSize);
+    if (idx >= 0) m_size->setCurrentIndex(idx);
+    m_komi->setValue(s.komi);
+    m_handicap->setValue(s.handicap);
+    m_blackAI->setChecked(s.black.kind == PlayerConfig::AI);
+    m_whiteAI->setChecked(s.white.kind == PlayerConfig::AI);
+}
+
 GameSetup NewGameDialog::setup() const {
     GameSetup s;
     s.boardSize = m_size->currentData().toInt();
