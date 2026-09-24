@@ -64,7 +64,7 @@ Game* GameController::detachGame() {
 
 bool GameController::humanPlay(QPoint pos) {
     if (!m_game || m_phase != Phase::HumanTurn || m_movePending) {
-        Q_EMIT moveRejected(QStringLiteral("Not your turn"));
+        Q_EMIT moveRejected(tr("Not your turn"));
         return false;
     }
     const Stone toMove = m_game->nextToPlay();
@@ -72,11 +72,11 @@ bool GameController::humanPlay(QPoint pos) {
     const PlayerConfig::Kind kind =
         toMove == Stone::Black ? m_setup.black.kind : m_setup.white.kind;
     if (kind != PlayerConfig::Human) {
-        Q_EMIT moveRejected(QStringLiteral("Not your turn"));
+        Q_EMIT moveRejected(tr("Not your turn"));
         return false;
     }
     if (!m_game->play(pos, toMove)) {
-        Q_EMIT moveRejected(QStringLiteral("Illegal move"));
+        Q_EMIT moveRejected(tr("Illegal move"));
         return false;
     }
     // C4 fix: human pass closes the two-pass game when the engine just passed
