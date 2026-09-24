@@ -73,6 +73,22 @@ private slots:
         QCOMPARE(g.komi, 7.5);       // 解析失败 → 默认
         QCOMPARE(g.handicap, 0);     // 99 超界 → 0
     }
+    void languageRoundTrip() {
+        QTemporaryDir dir;
+        const QString path = dir.path() + "/settings.ini";
+        {
+            AppSettings s(path);
+            QCOMPARE(s.language(), QString());   // empty = follow system
+            s.setLanguage("zh_CN");
+        }
+        AppSettings s2(path);
+        QCOMPARE(s2.language(), QString("zh_CN"));
+        AppSettings s3(dir.path() + "/s2.ini");
+        s3.setLanguage("en");
+        QCOMPARE(s3.language(), QString("en"));
+        s3.setLanguage(QString());   // reset to follow-system
+        QVERIFY(s3.language().isEmpty());
+    }
     void geometryRoundTrip() {
         // review focus 5: 几何字节往返
         QTemporaryDir dir;
