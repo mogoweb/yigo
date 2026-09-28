@@ -8,12 +8,18 @@ set(CMAKE_AUTOMOC ON)
 find_package(Qt5 5.11 REQUIRED COMPONENTS Core Test Widgets)
 
 # translations: compile .ts -> .qm at build time
-find_program(LRELEASE_EXECUTABLE NAMES lrelease
-    PATHS /usr/lib/qt5/bin /usr/lib/x86_64-linux-gnu/qt5/bin
-    NO_DEFAULT_PATH)
-if(NOT LRELEASE_EXECUTABLE)
-    find_program(LRELEASE_EXECUTABLE lrelease)   # qtchooser fallback
+# Locate lrelease next to the qmake of the Qt found above. Never fall back to
+# PATH lookup: /usr/bin/lrelease is a qtchooser wrapper that dies with
+# "could not find a Qt installation" when no default Qt is selected.
+unset(LRELEASE_EXECUTABLE CACHE)   # drop stale entries from earlier configures
+get_target_property(QT_QMAKE_EXECUTABLE Qt5::qmake IMPORTED_LOCATION)
+if(QT_QMAKE_EXECUTABLE)
+    get_filename_component(QT_BIN_DIR "${QT_QMAKE_EXECUTABLE}" DIRECTORY)
 endif()
+find_program(LRELEASE_EXECUTABLE NAMES lrelease
+    HINTS ${QT_BIN_DIR}
+    PATHS /usr/lib/qt5/bin
+    NO_DEFAULT_PATH)
 if(LRELEASE_EXECUTABLE)
     add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/yigo_zh_CN.qm
