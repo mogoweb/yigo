@@ -53,7 +53,17 @@ sudo dpkg -i build/yigo_0.5.0_amd64.deb   # 安装 /usr/bin/yigo + 桌面入口
 
 ## 引擎使用
 
-仓库内附带一套 KataGo：`engines/KataGo/katago`（CPU/Eigen 版）、权重 `engines/KataGo/models/`、配置 `engines/KataGo/gtp.cfg`，Engine 面板默认已填好这些路径，直接点 **Start** 即可。配置里写了 `reportAnalysisWinratesAs = BLACK`，因为弈境内部统一用黑方视角胜率。
+仓库内附带一套 KataGo，Engine 面板默认已填好路径，直接点 **Start** 即可：
+
+```
+engines/KataGo/gtp.cfg                  # 现成配置
+engines/KataGo/models/*.bin.gz          # 权重（与架构无关）
+engines/KataGo/<arch>/katago            # 每个架构一份：amd64 / arm64 / loong64 / mips64el
+```
+
+架构目录由 `YIGO_ENGINE_ARCH` 决定，默认按宿主机 CPU 推断（本机为 `loong64`），交叉打包时用 `cmake -DYIGO_ENGINE_ARCH=arm64` 覆盖。`cmake --build build --target deb` 只把该架构目录连同权重、配置拷进 `/usr/share/yigo/engines/`，产出 `yigo_0.5.0_<arch>.deb`。配置里写了 `reportAnalysisWinratesAs = BLACK`，因为弈境内部统一用黑方视角胜率。
+
+新增架构时，把对应的 `katago` 放到 `engines/KataGo/<arch>/` 下再以该 `YIGO_ENGINE_ARCH` 构建即可。
 
 若要用别的引擎，请自行安装 [KataGo](https://github.com/lightvector/KataGo) 或 Leela Zero，然后在应用内：
 

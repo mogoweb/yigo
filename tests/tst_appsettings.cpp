@@ -1,4 +1,5 @@
 #include <QtTest>
+#include <QFileInfo>
 #include <QTemporaryDir>
 #include "AppSettings.h"
 
@@ -11,14 +12,18 @@ private slots:
         AppSettings s(dir.path() + "/settings.ini");
         const EngineConfig e = s.engineConfig();
         QCOMPARE(e.type, EngineConfig::KataGo);
-        // bundled engine shipped in engines/KataGo is the default when present
-        QCOMPARE(e.executable, QStringLiteral(YIGO_ENGINE_DIR "/katago"));
-        QCOMPARE(e.baseArgs, QStringList()
-                                 << QStringLiteral("gtp")
-                                 << QStringLiteral("-model")
-                                 << QStringLiteral(YIGO_ENGINE_DIR "/models/b10c384h6nbttflrs.bin.gz")
-                                 << QStringLiteral("-config")
-                                 << QStringLiteral(YIGO_ENGINE_DIR "/gtp.cfg"));
+        // bundled engine shipped in engines/KataGo/<arch> is the default when
+        // that architecture's build is present; otherwise the panel starts empty
+        const QString exe = QStringLiteral(YIGO_ENGINE_DIR "/" YIGO_ENGINE_ARCH "/katago");
+        const bool hasBundle = QFileInfo::exists(exe);
+        QCOMPARE(e.executable, hasBundle ? exe : QString());
+        const QStringList modelArgs =
+            QStringList() << QStringLiteral("gtp")
+                          << QStringLiteral("-model")
+                          << QStringLiteral(YIGO_ENGINE_DIR "/models/b10c384h6nbttflrs.bin.gz")
+                          << QStringLiteral("-config")
+                          << QStringLiteral(YIGO_ENGINE_DIR "/gtp.cfg");
+        QCOMPARE(e.baseArgs, hasBundle ? modelArgs : QStringList());
         const GameSetup g = s.gameSetup();
         QCOMPARE(g.boardSize, 19);
         QCOMPARE(g.komi, 7.5);

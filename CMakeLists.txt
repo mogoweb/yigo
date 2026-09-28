@@ -33,6 +33,26 @@ if(LRELEASE_EXECUTABLE)
     add_custom_target(translations ALL DEPENDS ${CMAKE_BINARY_DIR}/yigo_zh_CN.qm)
 endif()
 
+# Target architecture: picks the bundled engine build in engines/KataGo/<arch>
+# and names the .deb. Uses the distro names shipped by UOS/Kylin debs.
+# Override for cross builds: cmake -DYIGO_ENGINE_ARCH=arm64
+if(NOT YIGO_ENGINE_ARCH)
+    if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+        set(_detected_arch amd64)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64")
+        set(_detected_arch arm64)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^loongarch64")
+        set(_detected_arch loong64)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^mips64")
+        set(_detected_arch mips64el)
+    else()
+        string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _detected_arch)
+    endif()
+    set(YIGO_ENGINE_ARCH "${_detected_arch}" CACHE STRING
+        "Target architecture for the bundled engine and the .deb name")
+endif()
+message(STATUS "Target architecture: ${YIGO_ENGINE_ARCH}")
+
 add_subdirectory(src/core)
 add_subdirectory(src/tools)
 add_subdirectory(src/ui)
@@ -43,22 +63,31 @@ add_subdirectory(tests/gui)
 # Debian packaging: builds a .deb from the already-built binary
 find_program(DPKG_DEB_EXECUTABLE dpkg-deb)
 if(DPKG_DEB_EXECUTABLE)
+    set(YIGO_DEB_NAME yigo_0.5.0_${YIGO_ENGINE_ARCH}.deb)
+    configure_file(${CMAKE_SOURCE_DIR}/packaging/debian/control.in
+                   ${CMAKE_BINARY_DIR}/packaging/debian/control @ONLY)
     add_custom_target(deb
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/debroot/DEBIAN
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/debroot/usr/bin
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/debroot/usr/share/applications
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/debroot/usr/share/icons/hicolor/scalable/apps
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/debroot/usr/share/yigo/translations
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/debroot/usr/share/yigo/engines/${YIGO_ENGINE_ARCH}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/debroot/usr/share/yigo/engines/models
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/src/ui/yigo ${CMAKE_BINARY_DIR}/debroot/usr/bin/yigo
         COMMAND strip --strip-unneeded ${CMAKE_BINARY_DIR}/debroot/usr/bin/yigo
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/packaging/debian/yigo.desktop ${CMAKE_BINARY_DIR}/debroot/usr/share/applications/yigo.desktop
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/packaging/icon.svg ${CMAKE_BINARY_DIR}/debroot/usr/share/icons/hicolor/scalable/apps/yigo.svg
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/packaging/debian/control ${CMAKE_BINARY_DIR}/debroot/DEBIAN/control
-        COMMAND ${DPKG_DEB_EXECUTABLE} --build --root-owner-group
-                ${CMAKE_BINARY_DIR}/debroot ${CMAKE_BINARY_DIR}/yigo_0.5.0_amd64.deb
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/yigo_zh_CN.qm ${CMAKE_BINARY_DIR}/debroot/usr/share/yigo/translations/yigo_zh_CN.qm
+        # bundled engine: only the build for the target architecture
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/engines/KataGo/${YIGO_ENGINE_ARCH}/katago ${CMAKE_BINARY_DIR}/debroot/usr/share/yigo/engines/${YIGO_ENGINE_ARCH}/katago
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/engines/KataGo/models/b10c384h6nbttflrs.bin.gz ${CMAKE_BINARY_DIR}/debroot/usr/share/yigo/engines/models/b10c384h6nbttflrs.bin.gz
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/engines/KataGo/gtp.cfg ${CMAKE_BINARY_DIR}/debroot/usr/share/yigo/engines/gtp.cfg
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/packaging/debian/control ${CMAKE_BINARY_DIR}/debroot/DEBIAN/control
+        COMMAND ${DPKG_DEB_EXECUTABLE} --build --root-owner-group
+                ${CMAKE_BINARY_DIR}/debroot ${CMAKE_BINARY_DIR}/${YIGO_DEB_NAME}
         DEPENDS yigo translations
-        COMMENT "Building yigo_0.5.0_amd64.deb"
+        COMMENT "Building ${YIGO_DEB_NAME}"
         VERBATIM
     )
 endif()
