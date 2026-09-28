@@ -37,4 +37,4 @@ target_link_libraries(tst_reviewcontroller PRIVATE yigo_core Qt5::Test)
 add_test(NAME tst_reviewcontroller COMMAND tst_reviewcontroller)
 
 yigo_add_test(tst_winratecurve)
-yigo_add_test(tst_appsettings)
+yigo_add_test(tst_appsettings)   # YIGO_ENGINE_DIR comes from yigo_core

@@ -1,4 +1,5 @@
 #include "AppSettings.h"
+#include <QFileInfo>
 #include <QSettings>
 
 AppSettings::AppSettings(const QString& iniPath) : m_iniPath(iniPath) {}
@@ -9,14 +10,38 @@ static QSettings makeSettings(const QString& iniPath) {
                : QSettings(iniPath, QSettings::IniFormat);
 }
 
+// KataGo build + weights bundled in engines/KataGo (see README), so a fresh
+// checkout can play and analyze without hunting for an engine. Empty when the
+// bundle is absent (e.g. a packaged install).
+static QString bundledEngineDir() {
+#ifdef YIGO_ENGINE_DIR
+    const QString dir = QStringLiteral(YIGO_ENGINE_DIR);
+    if (QFileInfo::exists(dir + QStringLiteral("/katago"))) return dir;
+#endif
+    return QString();
+}
+
 EngineConfig AppSettings::engineConfig() const {
     QSettings s = makeSettings(m_iniPath);
     EngineConfig cfg;
     cfg.type = s.value("engine/type", int(EngineConfig::KataGo)).toInt() == 1
                    ? EngineConfig::LeelaZero
                    : EngineConfig::KataGo;
-    cfg.executable = s.value("engine/executable").toString();
-    cfg.baseArgs = s.value("engine/args").toStringList();
+    const QString bundled = bundledEngineDir();
+    // KataGo needs -config or it aborts before the GTP handshake
+    const QStringList defaultArgs =
+        bundled.isEmpty()
+            ? QStringList()
+            : QStringList() << QStringLiteral("gtp")
+                            << QStringLiteral("-model")
+                            << bundled + QStringLiteral("/models/b10c384h6nbttflrs.bin.gz")
+                            << QStringLiteral("-config")
+                            << bundled + QStringLiteral("/gtp.cfg");
+    cfg.executable = s.value("engine/executable",
+                             bundled.isEmpty() ? QString()
+                                               : bundled + QStringLiteral("/katago"))
+                         .toString();
+    cfg.baseArgs = s.value("engine/args", defaultArgs).toStringList();
     cfg.gtpCommand = cfg.type == EngineConfig::KataGo
                          ? QStringLiteral("kata-analyze interval 50")
                          : QStringLiteral("lz-analyze");

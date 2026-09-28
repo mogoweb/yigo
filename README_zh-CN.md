@@ -53,7 +53,9 @@ sudo dpkg -i build/yigo_0.5.0_amd64.deb   # 安装 /usr/bin/yigo + 桌面入口
 
 ## 引擎使用
 
-弈境不捆绑引擎，请自行安装 [KataGo](https://github.com/lightvector/KataGo) 或 Leela Zero，然后在应用内：
+仓库内附带一套 KataGo：`engines/KataGo/katago`（CPU/Eigen 版）、权重 `engines/KataGo/models/`、配置 `engines/KataGo/gtp.cfg`，Engine 面板默认已填好这些路径，直接点 **Start** 即可。配置里写了 `reportAnalysisWinratesAs = BLACK`，因为弈境内部统一用黑方视角胜率。
+
+若要用别的引擎，请自行安装 [KataGo](https://github.com/lightvector/KataGo) 或 Leela Zero，然后在应用内：
 
 1. **Engine 面板（右侧 Dock）**：选择引擎类型、填可执行文件路径与参数，点 **Start**
 2. 人机对弈（**对局 → 新对局…**，选执方/让子/贴目），或打开 SGF 后按 **对局 → 分析整局（Ctrl+R）** 批量复盘
