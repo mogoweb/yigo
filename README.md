@@ -53,7 +53,9 @@ sudo dpkg -i build/yigo_0.5.0_amd64.deb   # installs /usr/bin/yigo + desktop ent
 
 ## Using an Engine
 
-YiGo does not bundle an engine. Install [KataGo](https://github.com/lightvector/KataGo) or Leela Zero yourself, then in the app:
+YiGo ships a KataGo build (`engines/KataGo/katago`, CPU/Eigen) plus weights in `engines/KataGo/models/` and a ready config `engines/KataGo/gtp.cfg`, so the Engine panel is pre-filled and **Start** works out of the box. The config sets `reportAnalysisWinratesAs = BLACK` because YiGo's internal winrate convention is black's perspective.
+
+To use another engine instead: install [KataGo](https://github.com/lightvector/KataGo) or Leela Zero yourself, then in the app:
 
 1. **Engine panel (right dock)**: pick engine type, set the executable path and arguments, press **Start**
 2. Play against it (**Game → New…**, choose sides/handicap/komi), or open an SGF and press **Game → Analyze Game (Ctrl+R)** for batch review

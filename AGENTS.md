@@ -23,7 +23,7 @@ Toolchain: g++ 8.3, CMake ≥3.16, Ninja (all UOS V20 defaults). Tests use QtTes
 - **Linux uses system Qt, not bundled**: build with `apt install qtbase5-dev`; runtime depends on system `libqt5core5a`. No vcpkg on Linux. The deb packages only the binary + desktop entry + icon.
 - **Layering is QtCore-pure at the bottom**: `src/core/` and `src/app/` (GameController/ReviewController/AppSettings/MainWindowLogic) may include ONLY QtCore headers — they are compiled into `yigo_core` and unit-tested without a GUI. `src/gtp/` likewise QtCore-only. Only `src/ui/` may use QtWidgets.
 - **Zero third-party deps**: SGF parsing, GTP protocol, charts all self-implemented. Do not add external libraries.
-- **Tests are offline**: `tests/data/fake_engine.sh` emulates a GTP engine (responses MUST end with the GTP blank-line terminator `\n\n`; `YIGO_FAKE_GENMOVE` env injects genmove replies). Never make tests depend on a real KataGo.
+- **Tests are offline**: `tests/data/fake_engine.sh` emulates a GTP engine (responses MUST end with the GTP blank-line terminator `\n\n`; `YIGO_FAKE_GENMOVE` env injects genmove replies). Never make tests depend on a real KataGo — a bundled CPU build lives in `engines/KataGo/` (`katago`, `models/`, `gtp.cfg`) for manual testing only, and `AppSettings` defaults to it via the `YIGO_ENGINE_DIR` compile definition.
 
 ## Architecture (4 layers)
 

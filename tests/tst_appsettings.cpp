@@ -10,8 +10,15 @@ private slots:
         QTemporaryDir dir;
         AppSettings s(dir.path() + "/settings.ini");
         const EngineConfig e = s.engineConfig();
-        QCOMPARE(e.executable, QString());
         QCOMPARE(e.type, EngineConfig::KataGo);
+        // bundled engine shipped in engines/KataGo is the default when present
+        QCOMPARE(e.executable, QStringLiteral(YIGO_ENGINE_DIR "/katago"));
+        QCOMPARE(e.baseArgs, QStringList()
+                                 << QStringLiteral("gtp")
+                                 << QStringLiteral("-model")
+                                 << QStringLiteral(YIGO_ENGINE_DIR "/models/b10c384h6nbttflrs.bin.gz")
+                                 << QStringLiteral("-config")
+                                 << QStringLiteral(YIGO_ENGINE_DIR "/gtp.cfg"));
         const GameSetup g = s.gameSetup();
         QCOMPARE(g.boardSize, 19);
         QCOMPARE(g.komi, 7.5);

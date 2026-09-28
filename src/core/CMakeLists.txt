@@ -19,4 +19,7 @@ target_include_directories(yigo_core PUBLIC
     ${CMAKE_SOURCE_DIR}/src/app
     ${CMAKE_SOURCE_DIR}/src/gtp
 )
+# default engine location: the KataGo bundle shipped in this source tree
+target_compile_definitions(yigo_core PUBLIC
+    YIGO_ENGINE_DIR="${CMAKE_SOURCE_DIR}/engines/KataGo")
 target_link_libraries(yigo_core PUBLIC Qt5::Core)
