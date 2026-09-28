@@ -53,7 +53,17 @@ sudo dpkg -i build/yigo_0.5.0_amd64.deb   # installs /usr/bin/yigo + desktop ent
 
 ## Using an Engine
 
-YiGo ships a KataGo build (`engines/KataGo/katago`, CPU/Eigen) plus weights in `engines/KataGo/models/` and a ready config `engines/KataGo/gtp.cfg`, so the Engine panel is pre-filled and **Start** works out of the box. The config sets `reportAnalysisWinratesAs = BLACK` because YiGo's internal winrate convention is black's perspective.
+YiGo ships a KataGo build, so the Engine panel is pre-filled and **Start** works out of the box:
+
+```
+engines/KataGo/gtp.cfg                  # ready config
+engines/KataGo/models/*.bin.gz          # weights (architecture-independent)
+engines/KataGo/<arch>/katago            # one build per architecture: amd64 / arm64 / loong64 / mips64el
+```
+
+The architecture directory comes from `YIGO_ENGINE_ARCH`, detected from the host CPU (`loong64` on this machine) and overridable with `cmake -DYIGO_ENGINE_ARCH=arm64`. `cmake --build build --target deb` packages only that directory plus the weights and config into `/usr/share/yigo/engines/`, and produces `yigo_0.5.0_<arch>.deb`. The config sets `reportAnalysisWinratesAs = BLACK` because YiGo's internal winrate convention is black's perspective.
+
+To add another architecture, drop its `katago` under `engines/KataGo/<arch>/` and build with that `YIGO_ENGINE_ARCH`.
 
 To use another engine instead: install [KataGo](https://github.com/lightvector/KataGo) or Leela Zero yourself, then in the app:
 

@@ -10,15 +10,38 @@ static QSettings makeSettings(const QString& iniPath) {
                : QSettings(iniPath, QSettings::IniFormat);
 }
 
-// KataGo build + weights bundled in engines/KataGo (see README), so a fresh
-// checkout can play and analyze without hunting for an engine. Empty when the
-// bundle is absent (e.g. a packaged install).
-static QString bundledEngineDir() {
-#ifdef YIGO_ENGINE_DIR
-    const QString dir = QStringLiteral(YIGO_ENGINE_DIR);
-    if (QFileInfo::exists(dir + QStringLiteral("/katago"))) return dir;
-#endif
+// KataGo build + weights bundled with YiGo (see README), so a fresh checkout
+// can play and analyze without hunting for an engine. Layout is
+// <root>/gtp.cfg, <root>/models/<weights>, <root>/<arch>/katago. Returns an
+// empty string when no bundle is present.
+static QString bundledEngineRoot() {
+    const QStringList roots = {
+        QStringLiteral(YIGO_ENGINE_DIR),            // this source tree
+        QStringLiteral(YIGO_INSTALLED_ENGINE_DIR),  // packaged install
+    };
+    for (const QString& root : roots) {
+        if (QFileInfo::exists(root + QStringLiteral("/")
+                              + QStringLiteral(YIGO_ENGINE_ARCH)
+                              + QStringLiteral("/katago")))
+            return root;
+    }
     return QString();
+}
+
+static EngineConfig bundledEngineConfig(const QString& root) {
+    EngineConfig cfg;
+    if (root.isEmpty()) return cfg;   // no bundle: leave the panel empty
+    cfg.type = EngineConfig::KataGo;
+    cfg.executable = root + QStringLiteral("/") + QStringLiteral(YIGO_ENGINE_ARCH)
+                     + QStringLiteral("/katago");
+    // KataGo needs -config or it aborts before the GTP handshake
+    cfg.baseArgs = QStringList()
+        << QStringLiteral("gtp")
+        << QStringLiteral("-model")
+        << root + QStringLiteral("/models/b10c384h6nbttflrs.bin.gz")
+        << QStringLiteral("-config")
+        << root + QStringLiteral("/gtp.cfg");
+    return cfg;
 }
 
 EngineConfig AppSettings::engineConfig() const {
@@ -27,21 +50,9 @@ EngineConfig AppSettings::engineConfig() const {
     cfg.type = s.value("engine/type", int(EngineConfig::KataGo)).toInt() == 1
                    ? EngineConfig::LeelaZero
                    : EngineConfig::KataGo;
-    const QString bundled = bundledEngineDir();
-    // KataGo needs -config or it aborts before the GTP handshake
-    const QStringList defaultArgs =
-        bundled.isEmpty()
-            ? QStringList()
-            : QStringList() << QStringLiteral("gtp")
-                            << QStringLiteral("-model")
-                            << bundled + QStringLiteral("/models/b10c384h6nbttflrs.bin.gz")
-                            << QStringLiteral("-config")
-                            << bundled + QStringLiteral("/gtp.cfg");
-    cfg.executable = s.value("engine/executable",
-                             bundled.isEmpty() ? QString()
-                                               : bundled + QStringLiteral("/katago"))
-                         .toString();
-    cfg.baseArgs = s.value("engine/args", defaultArgs).toStringList();
+    const EngineConfig bundled = bundledEngineConfig(bundledEngineRoot());
+    cfg.executable = s.value("engine/executable", bundled.executable).toString();
+    cfg.baseArgs = s.value("engine/args", bundled.baseArgs).toStringList();
     cfg.gtpCommand = cfg.type == EngineConfig::KataGo
                          ? QStringLiteral("kata-analyze interval 50")
                          : QStringLiteral("lz-analyze");
