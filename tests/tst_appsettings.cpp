@@ -30,6 +30,7 @@ private slots:
         QCOMPARE(g.handicap, 0);
         QCOMPARE(g.black.kind, PlayerConfig::Human);
         QCOMPARE(g.white.kind, PlayerConfig::Human);
+        QCOMPARE(e.moveSeconds, 5);   // per-move budget for CPU engines
         QVERIFY(s.windowGeometry().isEmpty());
     }
     void engineRoundTrip() {
@@ -42,6 +43,7 @@ private slots:
             cfg.executable = "/opt/lz/leelaz";
             cfg.baseArgs = QStringList() << "--weights" << "w.gz";
             cfg.gtpCommand = "lz-analyze";
+            cfg.moveSeconds = 10;
             s.setEngineConfig(cfg);
         }
         AppSettings s2(path);   // reopen after sync
@@ -50,6 +52,7 @@ private slots:
         QCOMPARE(e.executable, QString("/opt/lz/leelaz"));
         QCOMPARE(e.baseArgs, QStringList() << "--weights" << "w.gz");
         QCOMPARE(e.gtpCommand, QString("lz-analyze"));
+        QCOMPARE(e.moveSeconds, 10);
     }
     void gameSetupRoundTrip() {
         QTemporaryDir dir;

@@ -83,6 +83,12 @@ bool EngineProcess::start(const EngineConfig& cfg) {
     armQueryTimeout();
     query(m_nextId++, "name");
     query(m_nextId++, "list_commands");
+    // bound the engine's thinking time: on a CPU-only build an unbounded
+    // genmove is limited only by maxVisits (~115s per 19x19 move measured on
+    // the bundled KataGo), which reads as "the engine never replies"
+    if (m_cfg.moveSeconds > 0)
+        query(m_nextId++,
+              QStringLiteral("time_settings 0 %1 1").arg(m_cfg.moveSeconds));
     return true;
 }
 
