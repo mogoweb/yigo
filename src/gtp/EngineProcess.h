@@ -30,6 +30,7 @@ public:
     void analyzePosition(const Game& game, const AnalysisQuery& q);
     void startAnalysis(const AnalysisQuery& q);           // stream on current board
     void stopAnalysis();
+    void setQueryTimeout(int ms);   // override the 30s guard (tests)
 
 signals:
     void connected(const QString& engineName, const QStringList& supportedCommands);

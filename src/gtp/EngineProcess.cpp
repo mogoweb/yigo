@@ -12,6 +12,10 @@ EngineProcess::EngineProcess(QObject* parent)
     connect(&m_queryTimeout, &QTimer::timeout, this, [this] {
         if (m_state == State::Analyzing || m_state == State::Stopping)
             m_state = State::Idle;
+        // spec §6: 复位后允许重试 — 必须把读取权交还 GtpClient，否则解码器停在
+        // paused、EngineProcess 又不是 Analyzing，之后所有命令都无人收取
+        if (m_client) m_client->setPaused(false);
+        m_positionQueue.clear();
         Q_EMIT errorOccurred(QStringLiteral("GTP response timeout (30s)"));
     });
 }
@@ -154,7 +158,9 @@ void EngineProcess::doStartAnalysis() {
     if (m_cfg.type == EngineConfig::KataGo)
         cmd += m_analysisQuery.color == Stone::Black ? " B" : " W";
     m_client->sendCommand(cmd, m_nextId++);
-    armQueryTimeout();
+    // no timeout here: an interval analysis stream never produces a framed
+    // response by design, so arming one only fires a spurious error and resets
+    // the state machine out from under the live stream
 }
 
 void EngineProcess::stopAnalysis() {
@@ -171,6 +177,10 @@ void EngineProcess::stopAnalysis() {
 
 void EngineProcess::armQueryTimeout() {
     m_queryTimeout.start();
+}
+
+void EngineProcess::setQueryTimeout(int ms) {
+    m_queryTimeout.setInterval(ms);
 }
 
 void EngineProcess::onReadyRead() {

@@ -67,6 +67,34 @@ private slots:
         QCOMPARE(gc.game()->board().stoneAt(3, 5), Stone::White);   // AI执白，D4 = (3,5)@9路
         ep.stop();
     }
+    void analysisTimeoutKeepsGenmoveAlive() {
+        // 回归：分析流是常驻流、永不产生 GTP 响应；若在分析期间武装 30s 超时，
+        // 超时会把状态复位成 Idle 却让解码器停在 paused，之后 genmove 再也收不到
+        // 回复（白棋不下，30s 后报 "GTP response timeout"）
+        GameSetup setup;
+        setup.boardSize = 9;
+        setup.black.kind = PlayerConfig::Human;
+        setup.white.kind = PlayerConfig::AI;
+        GameController gc;
+        EngineProcess ep;
+        QSignalSpy err(&ep, &EngineProcess::errorOccurred);
+        QSignalSpy conn(&ep, &EngineProcess::connected);
+        QVERIFY(ep.start(fakeCfg()));
+        QTRY_COMPARE(conn.count(), 1);
+        gc.attachEngine(&ep);
+        gc.newGame(setup);
+        ep.setQueryTimeout(300);   // 用 300ms 走一遍 30s 超时逻辑
+        AnalysisQuery q;
+        q.color = Stone::Black;
+        ep.analyzePosition(*gc.game(), q);
+        QTRY_VERIFY(ep.isAnalyzing());
+        QTest::qWait(1500);        // 远超 300ms：分析期间不得误报超时
+        QCOMPARE(err.count(), 0);
+        QVERIFY(gc.humanPlay(QPoint(2, 2)));
+        QTRY_COMPARE(gc.phase(), GameController::Phase::HumanTurn);
+        QCOMPARE(gc.game()->board().stoneAt(3, 5), Stone::White);   // AI 回 D4
+        ep.stop();
+    }
     void genmovePassEnds() {
         qputenv("YIGO_FAKE_GENMOVE", "pass");
         GameSetup setup;
