@@ -154,9 +154,13 @@ void EngineProcess::doStartAnalysis() {
     m_client->setPaused(true);
     m_lineBuffer.clear();
     QString cmd = m_cfg.gtpCommand;
-    // KataGo kata-analyze honors a color argument (B / W)
-    if (m_cfg.type == EngineConfig::KataGo)
-        cmd += m_analysisQuery.color == Stone::Black ? " B" : " W";
+    // the optional player must come right after the command name; appended at
+    // the end it is a parse error — KataGo answers
+    // "? Could not parse analyze arguments: 'interval 50 B'"
+    const QString color = m_analysisQuery.color == Stone::Black
+                              ? QStringLiteral(" B") : QStringLiteral(" W");
+    const int sp = cmd.indexOf(' ');
+    cmd = (sp < 0) ? cmd + color : cmd.left(sp) + color + cmd.mid(sp);
     m_client->sendCommand(cmd, m_nextId++);
     // no timeout here: an interval analysis stream never produces a framed
     // response by design, so arming one only fires a spurious error and resets

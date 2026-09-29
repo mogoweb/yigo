@@ -13,6 +13,13 @@ while IFS= read -r line; do
     firstWord="${rest%% *}"
     case "$firstWord" in
         kata-analyze|lz-analyze)
+            # real KataGo rejects a trailing player ("... interval 50 B"):
+            # the color has to precede the interval option
+            case "$rest" in
+                *"interval "*" B"|*"interval "*" W")
+                    printf "?%s Could not parse analyze arguments\n\n" "$id"
+                    continue ;;
+            esac
             # stream a few info frames then a blank-line terminator, keep serving
             printf "info move D4 visits 120 winrate 0.55 scoreLead 0.3\n"
             printf "info move Q16 visits 80 winrate 0.45 scoreLead -0.2\n"
