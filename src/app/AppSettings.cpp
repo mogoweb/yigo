@@ -56,6 +56,9 @@ EngineConfig AppSettings::engineConfig() const {
     cfg.gtpCommand = cfg.type == EngineConfig::KataGo
                          ? QStringLiteral("kata-analyze interval 50")
                          : QStringLiteral("lz-analyze");
+    bool secsOk = false;
+    const int secs = s.value("engine/moveSeconds", 5).toInt(&secsOk);
+    cfg.moveSeconds = (secsOk && secs >= 0 && secs <= 600) ? secs : 5;
     return cfg;
 }
 
@@ -64,6 +67,7 @@ void AppSettings::setEngineConfig(const EngineConfig& cfg) {
     s.setValue("engine/type", int(cfg.type));
     s.setValue("engine/executable", cfg.executable);
     s.setValue("engine/args", cfg.baseArgs);
+    s.setValue("engine/moveSeconds", cfg.moveSeconds);
     s.sync();
 }
 

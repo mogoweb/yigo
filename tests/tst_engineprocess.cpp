@@ -1,5 +1,7 @@
 #include <QtTest>
 #include <QSignalSpy>
+#include <QFile>
+#include <QTemporaryDir>
 #include "EngineProcess.h"
 
 class TestEngineProcess : public QObject {
@@ -43,6 +45,40 @@ private slots:
         }
         QVERIFY(found);
         ep.stop();
+    }
+    void startSendsMoveTimeBudget() {
+        QTemporaryDir dir;
+        // CPU builds need an explicit per-move budget, otherwise a 19x19
+        // genmove is bounded only by maxVisits (~115s) and looks like a hang
+        const QString log = dir.path() + QStringLiteral("/cmds.log");
+        qputenv("YIGO_FAKE_LOG", log.toUtf8());
+        EngineProcess ep;
+        EngineConfig cfg = fakeCfg();
+        QCOMPARE(cfg.moveSeconds, 5);
+        QVERIFY(ep.start(cfg));
+        auto readLog = [&log]() {
+            QFile f(log);
+            return f.open(QIODevice::ReadOnly) ? QString::fromUtf8(f.readAll())
+                                               : QString();
+        };
+        QTRY_VERIFY(readLog().contains(QStringLiteral("time_settings 0 5 1")));
+        ep.stop();
+
+        // 0 = leave the limits to the engine: no time_settings must be sent
+        const QString log2 = dir.path() + QStringLiteral("/cmds2.log");
+        qputenv("YIGO_FAKE_LOG", log2.toUtf8());
+        EngineProcess ep2;
+        EngineConfig cfg2 = fakeCfg();
+        cfg2.moveSeconds = 0;
+        QVERIFY(ep2.start(cfg2));
+        QTest::qWait(500);
+        QFile f2(log2);
+        const QString sent = f2.open(QIODevice::ReadOnly)
+                                 ? QString::fromUtf8(f2.readAll()) : QString();
+        QVERIFY(sent.contains(QStringLiteral("name")));
+        QVERIFY(!sent.contains(QStringLiteral("time_settings")));
+        ep2.stop();
+        qunsetenv("YIGO_FAKE_LOG");
     }
     void analysisStreamEmitsUpdates() {
         EngineProcess ep;

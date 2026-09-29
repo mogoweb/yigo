@@ -7,6 +7,8 @@ while IFS= read -r line; do
     case "$line" in
         \#*) continue ;;
     esac
+    # optional command trace so tests can assert what YiGo sent
+    [ -n "$YIGO_FAKE_LOG" ] && printf '%s\n' "$line" >> "$YIGO_FAKE_LOG"
     id="${line%% *}"; rest="${line#* }"
     [ "$rest" = "$line" ] && rest=""
     # analyze command: rest is "kata-analyze interval 50" — match the first word
@@ -24,6 +26,9 @@ while IFS= read -r line; do
             printf "info move D4 visits 120 winrate 0.55 scoreLead 0.3\n"
             printf "info move Q16 visits 80 winrate 0.45 scoreLead -0.2\n"
             printf "\n"
+            continue ;;
+        time_settings*|kata-time_settings*)
+            printf "=%s\n\n" "$id"
             continue ;;
         boardsize|clear_board|komi)
             printf "=%s\n\n" "$id"
