@@ -173,6 +173,12 @@ void EngineProcess::doStartAnalysis() {
     // the state machine out from under the live stream
 }
 
+void EngineProcess::setMoveBudget(int seconds) {
+    if (seconds <= 0 || !m_proc || !isRunning()) return;
+    m_cfg.moveSeconds = seconds;   // restart keeps the new budget
+    query(m_nextId++, QStringLiteral("time_settings 0 %1 1").arg(seconds));
+}
+
 void EngineProcess::stopAnalysis() {
     if (m_state != State::Analyzing) return;
     // per spec §4: interrupt the analyze stream by sending a lightweight

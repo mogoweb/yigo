@@ -117,6 +117,37 @@ private slots:
         QVERIFY(!ep.start(bad));
         ep.stop();
     }
+
+    void setMoveBudgetAppliesLive() {
+        // 强度档切换：运行中的引擎即时收到新的 time_settings（设计 §2），
+        // 且重启后保持（m_cfg 已更新）
+        QTemporaryDir dir;
+        const QString log = dir.path() + QStringLiteral("/cmds.log");
+        qputenv("YIGO_FAKE_LOG", log.toUtf8());
+        EngineProcess ep;
+        QVERIFY(ep.start(fakeCfg()));
+        auto readLog = [&log]() {
+            QFile f(log);
+            return f.open(QIODevice::ReadOnly) ? QString::fromUtf8(f.readAll())
+                                               : QString();
+        };
+        QTRY_VERIFY(readLog().contains(QStringLiteral("time_settings 0 5 1")));
+        ep.setMoveBudget(2);
+        QTRY_VERIFY(readLog().contains(QStringLiteral("time_settings 0 2 1")));
+        ep.stop();
+
+        // 重启：握手期应按新预算发 time_settings 0 2 1
+        const QString log2 = dir.path() + QStringLiteral("/cmds2.log");
+        qputenv("YIGO_FAKE_LOG", log2.toUtf8());
+        QVERIFY(ep.start(fakeCfg()));
+        QTRY_VERIFY(readLog().contains(QStringLiteral("time_settings 0 2 1")));
+        ep.stop();
+    }
+    void setMoveBudgetNoopWhenStopped() {
+        EngineProcess ep;   // 从未启动
+        ep.setMoveBudget(2);   // 不得崩溃、不得有副作用
+        QCOMPARE(ep.isRunning(), false);
+    }
 };
 
 QTEST_GUILESS_MAIN(TestEngineProcess)

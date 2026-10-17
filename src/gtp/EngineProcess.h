@@ -30,6 +30,9 @@ public:
     void analyzePosition(const Game& game, const AnalysisQuery& q);
     void startAnalysis(const AnalysisQuery& q);           // stream on current board
     void stopAnalysis();
+    // strength tiers: push a new per-move budget into a running engine;
+    // no-op when stopped or seconds <= 0. Remembered for the next start.
+    void setMoveBudget(int seconds);
     void setQueryTimeout(int ms);   // override the 30s guard (tests)
 
 signals:
