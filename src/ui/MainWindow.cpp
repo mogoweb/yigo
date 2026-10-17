@@ -307,7 +307,7 @@ void MainWindow::setupMenus() {
     m_saveAct = m_fileMenu->addAction(QString(), this, &MainWindow::onSave);
     m_saveAct->setShortcut(QKeySequence::Save);
     m_engineAct = m_fileMenu->addAction(QString(), this, &MainWindow::onEngineSettings);
-    m_engineAct->setShortcut(tr("Ctrl+E"));
+    m_engineAct->setShortcut(QStringLiteral("Ctrl+E"));   // locale-independent
     m_fileMenu->addSeparator();
     m_quitAct = m_fileMenu->addAction(QString(), this, &QWidget::close);
     m_quitAct->setShortcut(QKeySequence::Quit);
