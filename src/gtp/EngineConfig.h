@@ -9,6 +9,21 @@
 
 struct EngineConfig {
     enum EngineType { KataGo, LeelaZero } type = KataGo;
+    // UI strength tiers: the selector is cosmetic, engine/moveSeconds stays
+    // the persisted truth (round-tripped in AppSettings)
+    enum StrengthTier { TierFast = 0, TierStandard = 1, TierStrong = 2 };
+    static int secondsForTier(int tier) {
+        switch (tier) {
+        case TierFast: return 2;
+        case TierStrong: return 15;
+        default: return 5;   // Standard + any invalid value
+        }
+    }
+    static int tierForSeconds(int secs) {
+        if (secs == secondsForTier(TierFast)) return TierFast;
+        if (secs == secondsForTier(TierStrong)) return TierStrong;
+        return TierStandard;   // exact match required; 10 etc. shows Standard
+    }
     QString executable;
     QStringList baseArgs;        // e.g. {"-model","x.bin.gz","-config","y.cfg"}
     QString gtpCommand;          // KataGo: "kata-analyze interval 50"; LZ: "lz-analyze"

@@ -118,6 +118,22 @@ private slots:
         AppSettings s2(path);
         QCOMPARE(s2.windowGeometry(), geo);
     }
+
+    void strengthTierMapping() {
+        // 三档映射：快 2s / 标准 5s / 强 15s（设计文档 2026-10-17 §1）
+        QCOMPARE(EngineConfig::secondsForTier(EngineConfig::TierFast), 2);
+        QCOMPARE(EngineConfig::secondsForTier(EngineConfig::TierStandard), 5);
+        QCOMPARE(EngineConfig::secondsForTier(EngineConfig::TierStrong), 15);
+        // 非法档位回退标准
+        QCOMPARE(EngineConfig::secondsForTier(-1), 5);
+        QCOMPARE(EngineConfig::secondsForTier(99), 5);
+        // 反向：精确命中才返回对应档
+        QCOMPARE(EngineConfig::tierForSeconds(2), EngineConfig::TierFast);
+        QCOMPARE(EngineConfig::tierForSeconds(5), EngineConfig::TierStandard);
+        QCOMPARE(EngineConfig::tierForSeconds(15), EngineConfig::TierStrong);
+        // 旧配置里的其他值（如 round-trip 写过 10）：显示标准档，不改写配置
+        QCOMPARE(EngineConfig::tierForSeconds(10), EngineConfig::TierStandard);
+    }
 };
 
 QTEST_GUILESS_MAIN(TestAppSettings)
