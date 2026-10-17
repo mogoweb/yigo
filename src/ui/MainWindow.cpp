@@ -53,8 +53,10 @@ void MainWindow::setupCentral() {
     connect(m_boardView, &BoardView::boardClicked, this, &MainWindow::onBoardClicked);
     m_moveLabel = new QLabel(this);
     m_turnLabel = new QLabel(this);
+    m_engineLabel = new QLabel(this);
     statusBar()->addPermanentWidget(m_moveLabel);
     statusBar()->addPermanentWidget(m_turnLabel);
+    statusBar()->addPermanentWidget(m_engineLabel);
     statusBar()->showMessage(tr("Ready"), 2000);
 
     // play controller
@@ -212,7 +214,21 @@ void MainWindow::onGameOver(Stone winner, const QString& reason) {
     QMessageBox::information(this, tr("Game over"), text);
 }
 
+void MainWindow::updateEngineLabel() {
+    if (!m_engineLabel) return;
+    switch (m_engineState) {
+    case EngineUiState::Starting: m_engineLabel->setText(tr("Engine: starting")); break;
+    case EngineUiState::Running:  m_engineLabel->setText(tr("Engine: %1")
+                                              .arg(m_engine->engineName())); break;
+    case EngineUiState::Crashed:  m_engineLabel->setText(tr("Engine: crashed")); break;
+    case EngineUiState::Error:    m_engineLabel->setText(tr("Engine: error")); break;
+    default:                      m_engineLabel->setText(tr("Engine: stopped")); break;
+    }
+}
+
 void MainWindow::onEngineStart(const EngineConfig& cfg) {
+    m_engineState = EngineUiState::Starting;
+    updateEngineLabel();
     m_enginePanel->setStatus(tr("Starting..."));
     if (!m_engine->start(cfg)) {
         m_enginePanel->setStatus(tr("Start failed"), true);
@@ -230,6 +246,8 @@ void MainWindow::onEngineSettings() {
 }
 
 void MainWindow::onEngineStop() {
+    m_engineState = EngineUiState::Stopped;
+    updateEngineLabel();
     m_engine->stop();
     m_enginePanel->setStatus(tr("Stopped"));
     m_enginePanel->setRunning(false);
@@ -244,6 +262,8 @@ void MainWindow::onStrengthChanged(int seconds) {
 }
 
 void MainWindow::onEngineConnected() {
+    m_engineState = EngineUiState::Running;
+    updateEngineLabel();
     m_enginePanel->setStatus(tr("Connected: %1").arg(m_engine->engineName()));
     // engine games keep the engine free for genmove — no analysis stream.
     // Non-engine games (SGF review / human-vs-human) get the live overlay.
@@ -256,12 +276,16 @@ void MainWindow::onEngineConnected() {
 
 void MainWindow::onEngineCrashed(int) {
     // spec §6: main program survives; offer restart via panel Start
+    m_engineState = EngineUiState::Crashed;
+    updateEngineLabel();
     m_enginePanel->setStatus(tr("Engine crashed — offline play continues"), true);
     m_enginePanel->setRunning(false);
     statusBar()->showMessage(tr("Engine crashed"), 4000);
 }
 
 void MainWindow::onEngineError(const QString& msg) {
+    m_engineState = EngineUiState::Error;
+    updateEngineLabel();
     m_enginePanel->setStatus(msg, true);
     m_enginePanel->setRunning(false);
 }
@@ -359,6 +383,7 @@ void MainWindow::retranslateUi() {
     m_passAct->setText(tr("&Pass"));
     m_reviewAct->setText(tr("&Analyze Game"));
     m_chartDock->setWindowTitle(tr("Winrate"));
+    updateEngineLabel();
     refreshStatus();
 }
 

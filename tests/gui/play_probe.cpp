@@ -18,6 +18,8 @@
 
 #include <QComboBox>
 #include <QDialog>
+#include <QDockWidget>
+#include <QLabel>
 #include <QPointer>
 
 static QString readLog(const QString& path) {
@@ -70,6 +72,27 @@ int main(int argc, char** argv) {
     const bool noAnalyze = !readLog(logPath).contains("kata-analyze");
     std::printf("no analysis stream during play: %s\n", noAnalyze ? "OK" : "FAIL");
     failures += noAnalyze ? 0 : 1;
+
+    // engine state must stay visible in the main window (panel moved into
+    // the dialog): a status-bar label carries the connected engine name,
+    // and no dock may host the EnginePanel anymore
+    bool noDock = true;
+    for (QDockWidget* d : mw.findChildren<QDockWidget*>())
+        if (d->widget() == mw.findChild<EnginePanel*>()) noDock = false;
+    std::printf("engine panel not docked: %s\n", noDock ? "OK" : "FAIL");
+    failures += noDock ? 0 : 1;
+
+    bool statusLabel = false;
+    for (QLabel* l : mw.findChildren<QLabel*>()) {
+        if (l->window() == &mw
+            && l->text().contains(QStringLiteral("FakeEngine"))) {
+            statusLabel = true;
+            break;
+        }
+    }
+    std::printf("engine name in main-window status bar: %s\n",
+                statusLabel ? "OK" : "FAIL");
+    failures += statusLabel ? 0 : 1;
 
     // strength tier UI: switching to Strong must carry 15s in config(),
     // push a live time_settings into the running engine, and persist

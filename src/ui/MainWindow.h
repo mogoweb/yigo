@@ -66,6 +66,7 @@ private:
     void setupCentral();
     void retranslateUi();
     void refreshStatus();
+    void updateEngineLabel();
     void newGame(int size);
     void startGame(const GameSetup& setup);
     bool confirmDiscard();
@@ -93,6 +94,10 @@ private:
     BoardView* m_boardView = nullptr;
     QLabel* m_moveLabel = nullptr;
     QLabel* m_turnLabel = nullptr;
+    QLabel* m_engineLabel = nullptr;   // engine state, visible without the dialog
+    // last engine state for the status-bar label (retranslation needs it)
+    enum class EngineUiState { Stopped, Starting, Running, Crashed, Error };
+    EngineUiState m_engineState = EngineUiState::Stopped;
     QString m_currentFile;
     bool m_dirty = false;
     EngineProcess* m_engine = nullptr;
