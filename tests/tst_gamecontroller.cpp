@@ -308,6 +308,23 @@ private slots:
         QCOMPARE(gc.game()->currentNode()->moveNumber, 0);
         ep.stop();
     }
+
+    void hasAiSidePredicate() {
+        // UI 用它判断这一局要不要自动跑分析：至少一方是 AI 即为对弈局
+        GameController g1;
+        g1.newGame(GameSetup());                       // 双人类默认
+        QVERIFY(!g1.hasAiSide());
+        GameSetup aiBlack;
+        aiBlack.black.kind = PlayerConfig::AI;
+        GameController g2;
+        g2.newGame(aiBlack);
+        QVERIFY(g2.hasAiSide());
+        GameSetup aiWhite;
+        aiWhite.white.kind = PlayerConfig::AI;
+        GameController g3;
+        g3.newGame(aiWhite);
+        QVERIFY(g3.hasAiSide());
+    }
 };
 QTEST_GUILESS_MAIN(TestGameController)
 #include "tst_gamecontroller.moc"

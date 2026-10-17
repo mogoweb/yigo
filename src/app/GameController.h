@@ -34,6 +34,9 @@ public:
     Game* detachGame();
     Phase phase() const { return m_phase; }
     Stone engineColor() const { return m_engineColor; }
+    // at least one side is played by the engine (an engine game)
+    bool hasAiSide() const { return m_setup.black.kind == PlayerConfig::AI
+                                  || m_setup.white.kind == PlayerConfig::AI; }
     void attachEngine(EngineProcess* engine);   // not owned
     void detachEngine();
     Stone winner() const { return m_winner; }         // valid when GameOver
