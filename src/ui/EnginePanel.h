@@ -20,6 +20,8 @@ public:
 signals:
     void startRequested(const EngineConfig& cfg);
     void stopRequested();
+    // strength tier switched; carries the new per-move budget in seconds
+    void strengthChanged(int seconds);
 
 protected:
     void changeEvent(QEvent* e) override;
@@ -31,6 +33,8 @@ private:
     void retranslateUi();
 
     QComboBox* m_type = nullptr;
+    QComboBox* m_strength = nullptr;
+    QLabel* m_strengthLabel = nullptr;
     QLineEdit* m_path = nullptr;
     QLineEdit* m_args = nullptr;
     QLabel* m_engineLabel = nullptr;

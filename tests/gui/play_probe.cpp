@@ -13,7 +13,10 @@
 #include <cstdio>
 #include "AppSettings.h"
 #include "Board.h"
+#include "EnginePanel.h"
 #include "MainWindow.h"
+
+#include <QComboBox>
 
 static QString readLog(const QString& path) {
     QFile f(path);
@@ -65,6 +68,32 @@ int main(int argc, char** argv) {
     const bool noAnalyze = !readLog(logPath).contains("kata-analyze");
     std::printf("no analysis stream during play: %s\n", noAnalyze ? "OK" : "FAIL");
     failures += noAnalyze ? 0 : 1;
+
+    // strength tier UI: switching to Strong must carry 15s in config(),
+    // push a live time_settings into the running engine, and persist
+    EnginePanel* panel = mw.findChild<EnginePanel*>();
+    QComboBox* strength = panel
+        ? panel->findChild<QComboBox*>(QStringLiteral("strengthCombo")) : nullptr;
+    bool tierCfg = false;
+    if (strength) {
+        strength->setCurrentIndex(EngineConfig::TierStrong);
+        tierCfg = panel->config().moveSeconds == 15;
+    }
+    std::printf("tier switch updates config: %s\n", tierCfg ? "OK" : "FAIL");
+    failures += tierCfg ? 0 : 1;
+
+    bool live = false;
+    for (int i = 0; i < 50 && !live; ++i) {
+        live = readLog(logPath).contains(QStringLiteral("time_settings 0 15 1"));
+        if (!live) QTest::qWait(100);
+    }
+    std::printf("tier switch reaches running engine: %s\n", live ? "OK" : "FAIL");
+    failures += live ? 0 : 1;
+
+    AppSettings persisted(dir.path() + "/settings.ini");
+    const bool saved = persisted.engineConfig().moveSeconds == 15;
+    std::printf("tier change persists: %s\n", saved ? "OK" : "FAIL");
+    failures += saved ? 0 : 1;
 
     std::printf(failures == 0 ? "play_probe: all OK\n" : "play_probe: %d FAIL\n", failures);
     return failures == 0 ? 0 : 1;

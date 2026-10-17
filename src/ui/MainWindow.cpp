@@ -72,6 +72,8 @@ void MainWindow::setupCentral() {
     m_engine = new EngineProcess(this);
     connect(m_enginePanel, &EnginePanel::startRequested, this, &MainWindow::onEngineStart);
     connect(m_enginePanel, &EnginePanel::stopRequested, this, &MainWindow::onEngineStop);
+    connect(m_enginePanel, &EnginePanel::strengthChanged,
+            this, &MainWindow::onStrengthChanged);
     connect(m_engine, &EngineProcess::connected, this, &MainWindow::onEngineConnected);
     connect(m_engine, &EngineProcess::crashed, this, &MainWindow::onEngineCrashed);
     connect(m_engine, &EngineProcess::errorOccurred, this, &MainWindow::onEngineError);
@@ -226,6 +228,13 @@ void MainWindow::onEngineStop() {
     m_enginePanel->setStatus(tr("Stopped"));
     m_enginePanel->setRunning(false);
     m_boardView->setAnalysisOverlay(nullptr);
+}
+
+void MainWindow::onStrengthChanged(int seconds) {
+    // live tier switch: the running engine gets the new budget immediately;
+    // persist so a changed tier survives without closing the app
+    m_engine->setMoveBudget(seconds);
+    m_settings.setEngineConfig(m_enginePanel->config());
 }
 
 void MainWindow::onEngineConnected() {

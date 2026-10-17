@@ -46,6 +46,7 @@ private slots:
     void onLast();
     void onEngineStart(const EngineConfig& cfg);
     void onEngineStop();
+    void onStrengthChanged(int seconds);
     void onEngineConnected();
     void onEngineCrashed(int code);
     void onEngineError(const QString& msg);
