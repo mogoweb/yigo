@@ -83,8 +83,9 @@ GameSetup AppSettings::gameSetup() const {
     g.handicap = (hc >= 0 && hc <= 9) ? hc : 0;
     g.black.kind = s.value("game/blackAI", false).toBool() ? PlayerConfig::AI
                                                            : PlayerConfig::Human;
-    g.white.kind = s.value("game/whiteAI", false).toBool() ? PlayerConfig::AI
-                                                           : PlayerConfig::Human;
+    // default: human (black) vs engine (white) — play against KataGo out of the box
+    g.white.kind = s.value("game/whiteAI", true).toBool() ? PlayerConfig::AI
+                                                          : PlayerConfig::Human;
     return g;
 }
 

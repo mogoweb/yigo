@@ -29,7 +29,8 @@ private slots:
         QCOMPARE(g.komi, 7.5);
         QCOMPARE(g.handicap, 0);
         QCOMPARE(g.black.kind, PlayerConfig::Human);
-        QCOMPARE(g.white.kind, PlayerConfig::Human);
+        // 规格变更（2026-10-17）：默认人机对弈——人执黑，引擎执白
+        QCOMPARE(g.white.kind, PlayerConfig::AI);
         QCOMPARE(e.moveSeconds, 5);   // per-move budget for CPU engines
         QVERIFY(s.windowGeometry().isEmpty());
     }
@@ -62,6 +63,7 @@ private slots:
             GameSetup g;
             g.boardSize = 9; g.komi = 5.5; g.handicap = 2;
             g.black.kind = PlayerConfig::AI;
+            g.white.kind = PlayerConfig::AI;
             s.setGameSetup(g);
         }
         AppSettings s2(path);
@@ -70,7 +72,7 @@ private slots:
         QCOMPARE(g.komi, 5.5);
         QCOMPARE(g.handicap, 2);
         QCOMPARE(g.black.kind, PlayerConfig::AI);
-        QCOMPARE(g.white.kind, PlayerConfig::Human);
+        QCOMPARE(g.white.kind, PlayerConfig::AI);
     }
     void invalidValuesClamped() {
         // review focus 2: 非法值 → 回退默认
