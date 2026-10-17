@@ -71,3 +71,4 @@ qm/
 
 # compiled translations
 *.qm
+.worktrees/
