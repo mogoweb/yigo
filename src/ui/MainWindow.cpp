@@ -22,7 +22,8 @@
 #include <QStatusBar>
 #include <QTranslator>
 
-MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
+MainWindow::MainWindow(AppSettings* settings, QWidget* parent) : QMainWindow(parent) {
+    if (settings) m_settings = *settings;   // probe/test injection
     setWindowTitle(tr("YiGo 弈境"));
     resize(800, 600);
     setupCentral();
@@ -229,8 +230,9 @@ void MainWindow::onEngineStop() {
 
 void MainWindow::onEngineConnected() {
     m_enginePanel->setStatus(tr("Connected: %1").arg(m_engine->engineName()));
-    // engine is ready: analyze the current position so the overlay goes live
-    if (m_game) {
+    // engine games keep the engine free for genmove — no analysis stream.
+    // Non-engine games (SGF review / human-vs-human) get the live overlay.
+    if (m_game && !m_controller->hasAiSide()) {
         AnalysisQuery q;
         q.color = m_game->nextToPlay();
         m_engine->analyzePosition(*m_game, q);
@@ -344,8 +346,15 @@ void MainWindow::retranslateUi() {
 }
 
 void MainWindow::newGame(int size) {
-    GameSetup setup;
+    GameSetup setup = m_settings.gameSetup();
     setup.boardSize = size;
+    // Quick Start is a play-vs-engine entry: bring the engine up so the
+    // engine-ready signal can drive the turn machine (no-op when running)
+    if (m_engine && !m_engine->isRunning()) {
+        const EngineConfig cfg = m_enginePanel->config();
+        if (!cfg.executable.isEmpty())
+            onEngineStart(cfg);
+    }
     startGame(setup);
 }
 
@@ -362,6 +371,7 @@ void MainWindow::startGame(const GameSetup& setup) {
     m_controller->newGame(setup);
     m_game = m_controller->game();
     m_boardView->setGame(m_game);
+    m_boardView->setAnalysisOverlay(nullptr);   // stale overlay from the old game
     setWindowTitle(tr("YiGo 弈境"));
     refreshStatus();
 }
@@ -398,8 +408,9 @@ void MainWindow::onBoardClicked(QPoint pos) {
     markDirty();
     m_boardView->update();
     refreshStatus();
-    // keep the live analysis in sync with the new position (review fix C1)
-    if (m_engine && m_engine->isRunning()) {
+    // keep the live analysis in sync with the new position (review fix C1);
+    // engine games stay analysis-free so genmove owns the engine
+    if (m_engine && m_engine->isRunning() && !m_controller->hasAiSide()) {
         AnalysisQuery q;
         q.color = m_game->nextToPlay();
         m_engine->analyzePosition(*m_game, q);

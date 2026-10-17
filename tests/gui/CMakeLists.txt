@@ -22,6 +22,22 @@ endfunction()
 
 yigo_add_gui_probe(paint_probe)
 yigo_add_gui_probe(click_probe)
+
+# full-window play probe: needs MainWindow + the app/gtp layers (yigo_core)
+add_executable(play_probe play_probe.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MainWindow.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/BoardView.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/BoardGeometry.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/EnginePanel.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/NewGameDialog.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/ChartWinrate.cpp)
+target_compile_definitions(play_probe PRIVATE
+    YIGO_TRANSLATIONS_DIR="${CMAKE_BINARY_DIR}"
+    FAKE_ENGINE="${CMAKE_SOURCE_DIR}/tests/data/fake_engine.sh")
+target_include_directories(play_probe PRIVATE ${GUI_PROBE_INCLUDES})
+target_link_libraries(play_probe PRIVATE ${GUI_PROBE_LIBS})
+add_test(NAME play_probe COMMAND play_probe)
+set_tests_properties(play_probe PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 # colscan is a diagnostic tool (prints where lines landed), not a pass/fail test
 add_executable(colscan EXCLUDE_FROM_ALL colscan.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/BoardView.cpp

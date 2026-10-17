@@ -17,7 +17,13 @@ class QLabel;
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
-    explicit MainWindow(QWidget* parent = nullptr);
+    // settings injection for probes/tests; nullptr = default user-scope settings
+    explicit MainWindow(AppSettings* settings = nullptr, QWidget* parent = nullptr);
+
+public:
+    Game* game() const { return m_game; }   // read-only access for probes
+
+protected:
 
 protected:
     void keyPressEvent(QKeyEvent* e) override;
