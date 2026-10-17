@@ -271,6 +271,43 @@ private slots:
         QCOMPARE(gc.phase(), GameController::Phase::HumanTurn);
         ep.stop();
     }
+
+    void connectedTwiceNoDoubleGenmove() {
+        // 引擎重启 → 第二次 connected；此时轮到人类，不得再发 genmove
+        GameSetup setup;
+        setup.boardSize = 9;
+        setup.black.kind = PlayerConfig::AI;
+        setup.white.kind = PlayerConfig::Human;
+        GameController gc;
+        EngineProcess ep;
+        gc.attachEngine(&ep);
+        gc.newGame(setup);
+        QVERIFY(ep.start(fakeCfg()));
+        QTRY_COMPARE(gc.game()->board().stoneAt(3, 5), Stone::Black);
+        QCOMPARE(gc.phase(), GameController::Phase::HumanTurn);
+        ep.stop();
+        QVERIFY(ep.start(fakeCfg()));   // 第二次 connected
+        QTest::qWait(300);              // 给潜在（不该发生的）genmove 留时间
+        QCOMPARE(gc.game()->currentNode()->moveNumber, 1);   // 仍然只有 1 手
+        QCOMPARE(gc.phase(), GameController::Phase::HumanTurn);
+        ep.stop();
+    }
+    void engineReadyKeepsHumanTurn() {
+        // 人黑 vs AI 白：引擎后启动时是人类先手，connected 不得惊扰
+        GameSetup setup;
+        setup.boardSize = 9;
+        setup.black.kind = PlayerConfig::Human;
+        setup.white.kind = PlayerConfig::AI;
+        GameController gc;
+        EngineProcess ep;
+        gc.attachEngine(&ep);
+        gc.newGame(setup);
+        QVERIFY(ep.start(fakeCfg()));
+        QTest::qWait(300);              // connected 已到；不该有 genmove
+        QCOMPARE(gc.phase(), GameController::Phase::HumanTurn);
+        QCOMPARE(gc.game()->currentNode()->moveNumber, 0);
+        ep.stop();
+    }
 };
 QTEST_GUILESS_MAIN(TestGameController)
 #include "tst_gamecontroller.moc"
