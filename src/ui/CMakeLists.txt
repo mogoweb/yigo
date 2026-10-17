@@ -4,6 +4,7 @@ add_executable(yigo
     BoardView.cpp
     BoardGeometry.cpp
     EnginePanel.cpp
+    EngineDialog.cpp
     NewGameDialog.cpp
     ChartWinrate.cpp
 )

@@ -2,6 +2,7 @@
 
 #include "BoardView.h"
 #include "ChartWinrate.h"
+#include "EngineDialog.h"
 #include "EnginePanel.h"
 #include "EngineProcess.h"
 #include "MainWindowLogic.h"
@@ -64,11 +65,9 @@ void MainWindow::setupCentral() {
         statusBar()->showMessage(r, 2000);
     });
 
-    // engine dock + process
-    m_enginePanel = new EnginePanel(this);
-    m_engineDock = new QDockWidget(QString(), this);
-    m_engineDock->setWidget(m_enginePanel);
-    addDockWidget(Qt::RightDockWidgetArea, m_engineDock);
+    // engine settings dialog (non-modal, hidden until opened) + process
+    m_engineDialog = new EngineDialog(this);
+    m_enginePanel = m_engineDialog->panel();
     m_engine = new EngineProcess(this);
     connect(m_enginePanel, &EnginePanel::startRequested, this, &MainWindow::onEngineStart);
     connect(m_enginePanel, &EnginePanel::stopRequested, this, &MainWindow::onEngineStop);
@@ -223,6 +222,13 @@ void MainWindow::onEngineStart(const EngineConfig& cfg) {
     }
 }
 
+void MainWindow::onEngineSettings() {
+    // single non-modal instance: reopen just brings it to the front
+    m_engineDialog->show();
+    m_engineDialog->raise();
+    m_engineDialog->activateWindow();
+}
+
 void MainWindow::onEngineStop() {
     m_engine->stop();
     m_enginePanel->setStatus(tr("Stopped"));
@@ -276,6 +282,8 @@ void MainWindow::setupMenus() {
     m_openAct->setShortcut(QKeySequence::Open);
     m_saveAct = m_fileMenu->addAction(QString(), this, &MainWindow::onSave);
     m_saveAct->setShortcut(QKeySequence::Save);
+    m_engineAct = m_fileMenu->addAction(QString(), this, &MainWindow::onEngineSettings);
+    m_engineAct->setShortcut(tr("Ctrl+E"));
     m_fileMenu->addSeparator();
     m_quitAct = m_fileMenu->addAction(QString(), this, &QWidget::close);
     m_quitAct->setShortcut(QKeySequence::Quit);
@@ -333,6 +341,7 @@ void MainWindow::retranslateUi() {
     m_fileMenu->setTitle(tr("&File"));
     m_openAct->setText(tr("&Open..."));
     m_saveAct->setText(tr("&Save As..."));
+    m_engineAct->setText(tr("Engine Settings..."));
     m_quitAct->setText(tr("E&xit"));
     m_langMenu->setTitle(tr("&Language"));
     m_langSystem->setText(tr("Follow System"));
@@ -349,7 +358,6 @@ void MainWindow::retranslateUi() {
     m_undoAct->setText(tr("&Undo"));
     m_passAct->setText(tr("&Pass"));
     m_reviewAct->setText(tr("&Analyze Game"));
-    m_engineDock->setWindowTitle(tr("Engine"));
     m_chartDock->setWindowTitle(tr("Winrate"));
     refreshStatus();
 }

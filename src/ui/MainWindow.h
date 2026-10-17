@@ -10,6 +10,7 @@
 
 class BoardView;
 class ChartWinrate;
+class EngineDialog;
 class EnginePanel;
 class EngineProcess;
 class QLabel;
@@ -46,6 +47,7 @@ private slots:
     void onLast();
     void onEngineStart(const EngineConfig& cfg);
     void onEngineStop();
+    void onEngineSettings();
     void onStrengthChanged(int seconds);
     void onEngineConnected();
     void onEngineCrashed(int code);
@@ -84,8 +86,8 @@ private:
     QAction* m_langSystem = nullptr;
     QAction* m_langZh = nullptr;
     QAction* m_langEn = nullptr;
-    QDockWidget* m_engineDock = nullptr;
     QDockWidget* m_chartDock = nullptr;
+    QAction* m_engineAct = nullptr;
 
     Game* m_game = nullptr;
     BoardView* m_boardView = nullptr;
@@ -94,6 +96,7 @@ private:
     QString m_currentFile;
     bool m_dirty = false;
     EngineProcess* m_engine = nullptr;
+    EngineDialog* m_engineDialog = nullptr;   // owns the panel; single instance
     EnginePanel* m_enginePanel = nullptr;
     AnalysisData m_lastAnalysis;
     GameController* m_controller = nullptr;

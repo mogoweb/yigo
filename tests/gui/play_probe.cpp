@@ -17,6 +17,8 @@
 #include "MainWindow.h"
 
 #include <QComboBox>
+#include <QDialog>
+#include <QPointer>
 
 static QString readLog(const QString& path) {
     QFile f(path);
@@ -95,6 +97,38 @@ int main(int argc, char** argv) {
     std::printf("tier change persists: %s\n", saved ? "OK" : "FAIL");
     failures += saved ? 0 : 1;
 
+
+    // engine settings dialog: single non-modal instance hosting the panel
+    EnginePanel* panelRef = mw.findChild<EnginePanel*>();
+    QPointer<EnginePanel> guard = panelRef;
+    QMetaObject::invokeMethod(&mw, "onEngineSettings");
+    QTest::qWait(50);
+    const QList<QDialog*> dialogs = mw.findChildren<QDialog*>();
+    const bool opened = dialogs.size() == 1 && dialogs.first()->isVisible()
+                        && dialogs.first()->findChild<EnginePanel*>() == panelRef;
+    std::printf("settings dialog hosts the panel: %s\n", opened ? "OK" : "FAIL");
+    failures += opened ? 0 : 1;
+
+    QDialog* addr = dialogs.isEmpty() ? nullptr : dialogs.first();
+    QMetaObject::invokeMethod(&mw, "onEngineSettings");   // second open
+    QTest::qWait(50);
+    const bool single = mw.findChildren<QDialog*>().size() == 1
+                        && mw.findChild<QDialog*>() == addr;
+    std::printf("second open reuses the dialog: %s\n", single ? "OK" : "FAIL");
+    failures += single ? 0 : 1;
+
+    if (addr) addr->close();
+    QTest::qWait(50);
+    const bool survives = !guard.isNull() && (!addr || !addr->isVisible());
+    std::printf("close hides but keeps the panel: %s\n", survives ? "OK" : "FAIL");
+    failures += survives ? 0 : 1;
+
+    QMetaObject::invokeMethod(&mw, "onEngineSettings");   // reopen
+    QTest::qWait(50);
+    const bool reopen = mw.findChild<QDialog*>() == addr && addr && addr->isVisible()
+                        && !guard.isNull();
+    std::printf("reopen shows the same dialog: %s\n", reopen ? "OK" : "FAIL");
+    failures += reopen ? 0 : 1;
     std::printf(failures == 0 ? "play_probe: all OK\n" : "play_probe: %d FAIL\n", failures);
     return failures == 0 ? 0 : 1;
 }

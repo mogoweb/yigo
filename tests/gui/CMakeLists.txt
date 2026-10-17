@@ -29,6 +29,7 @@ add_executable(play_probe play_probe.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/BoardView.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/BoardGeometry.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/EnginePanel.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/EngineDialog.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/NewGameDialog.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/ChartWinrate.cpp)
 target_compile_definitions(play_probe PRIVATE
