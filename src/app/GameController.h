@@ -53,6 +53,7 @@ signals:
 
 private slots:
     void onQueryFinished(quint64 id, bool success, const QString& body);
+    void onEngineReady();
     void onEngineCrashed(int code);
     void onEngineError(const QString& msg);
 
@@ -72,6 +73,7 @@ private:
     ScoreResult m_finalScore;
     EngineProcess* m_engine = nullptr;
     QMetaObject::Connection m_queryConn;
+    QMetaObject::Connection m_readyConn;
     QMetaObject::Connection m_crashConn;
     QMetaObject::Connection m_errConn;
     quint64 m_genmoveId = 0;

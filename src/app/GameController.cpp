@@ -14,6 +14,10 @@ void GameController::attachEngine(EngineProcess* engine) {
     if (!m_engine) return;
     m_queryConn = connect(m_engine, &EngineProcess::queryFinished, this,
                           &GameController::onQueryFinished);
+    // engine lifecycle feeds the turn machine: a late-started engine must
+    // pick up its pending move (regression: start button only analyzed)
+    m_readyConn = connect(m_engine, &EngineProcess::connected, this,
+                          &GameController::onEngineReady);
     m_crashConn = connect(m_engine, &EngineProcess::crashed, this,
                           &GameController::onEngineCrashed);
     m_errConn = connect(m_engine, &EngineProcess::errorOccurred, this,
@@ -23,6 +27,7 @@ void GameController::attachEngine(EngineProcess* engine) {
 void GameController::detachEngine() {
     if (!m_engine) return;
     disconnect(m_queryConn);
+    disconnect(m_readyConn);
     disconnect(m_crashConn);
     disconnect(m_errConn);
     m_engine = nullptr;
@@ -169,6 +174,13 @@ void GameController::onQueryFinished(quint64 id, bool success, const QString& bo
         endGame(Stone::Empty, QStringLiteral("engine error"));
         return;
     }
+    advanceTurn();
+}
+
+// engine became ready: re-evaluate the turn (advanceTurn is idempotent —
+// it only fires genmove when the side to move is an AI side)
+void GameController::onEngineReady() {
+    if (!m_game || m_phase == Phase::GameOver || m_movePending) return;
     advanceTurn();
 }
 

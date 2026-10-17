@@ -248,6 +248,29 @@ private slots:
         qunsetenv("YIGO_FAKE_GENMOVE");
         ep.stop();
     }
+
+    void engineReadyKicksOffEngineTurn() {
+        // 引擎后启动：AI 执黑时 connected 信号要补上欠的首手
+        // （回归：主界面点「启动」后只分析不对弈的根因——回合状态机
+        // 与引擎生命周期解耦，connected 无人接）
+        GameSetup setup;
+        setup.boardSize = 9;
+        setup.black.kind = PlayerConfig::AI;
+        setup.white.kind = PlayerConfig::Human;
+        GameController gc;
+        EngineProcess ep;
+        gc.attachEngine(&ep);
+        gc.newGame(setup);
+        // 引擎未启动：先落在人类回合顶上
+        QCOMPARE(gc.phase(), GameController::Phase::HumanTurn);
+        QVERIFY(ep.start(fakeCfg()));
+        // 引擎就绪 → 立刻替 AI 走首手（fake 引擎回 D4，9路 = (3,5)）。
+        // 不钉住瞬态 EngineThinking：fake 引擎瞬间回手，轮询会错过该相位；
+        // 引擎落子 + 回到人类回合即为终态证据
+        QTRY_COMPARE(gc.game()->board().stoneAt(3, 5), Stone::Black);
+        QCOMPARE(gc.phase(), GameController::Phase::HumanTurn);
+        ep.stop();
+    }
 };
 QTEST_GUILESS_MAIN(TestGameController)
 #include "tst_gamecontroller.moc"
